@@ -1,4 +1,4 @@
-/*
+﻿/*
  * Created by SharpDevelop.
  * User: Spikeman
  * Date: 1/10/2007
@@ -37,6 +37,7 @@ namespace ProjectGBA
 		{
 			this.tCode = new System.Windows.Forms.TextBox();
 			this.bAssemble = new System.Windows.Forms.Button();
+			this.bDebug = new System.Windows.Forms.Button();
 			this.SuspendLayout();
 			// 
 			// tCode
@@ -59,18 +60,31 @@ namespace ProjectGBA
 			this.bAssemble.UseVisualStyleBackColor = true;
 			this.bAssemble.Click += new System.EventHandler(this.BAssembleClick);
 			// 
+			// bDebug
+			// 
+			this.bDebug.Location = new System.Drawing.Point(93, 238);
+			this.bDebug.Name = "bDebug";
+			this.bDebug.Size = new System.Drawing.Size(75, 23);
+			this.bDebug.TabIndex = 2;
+			this.bDebug.Text = "Debug";
+			this.bDebug.UseVisualStyleBackColor = true;
+			this.bDebug.Click += new System.EventHandler(this.BDebugClick);
+			// 
 			// MainForm
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(292, 273);
+			this.Controls.Add(this.bDebug);
 			this.Controls.Add(this.bAssemble);
 			this.Controls.Add(this.tCode);
 			this.Name = "MainForm";
 			this.Text = "ProjectGBA";
+			this.Load += new System.EventHandler(this.MainFormLoad);
 			this.ResumeLayout(false);
 			this.PerformLayout();
 		}
+		private System.Windows.Forms.Button bDebug;
 		private System.Windows.Forms.Button bAssemble;
 		private System.Windows.Forms.TextBox tCode;
 	}
