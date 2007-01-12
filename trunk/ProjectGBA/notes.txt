@@ -1,0 +1,80 @@
+Things to add so compatible with goldroad:
+ - Expressions:
+   - ~ (NOT) and - (UNARY MINUS)
+     - need + as well?
+   - Operator precidence (C standard)
+ - £ symbol (current location)
+ - conditional assembly
+   - @define with one argument
+   - @ifdef, @ifndef, @else, @endif
+   - @undef (undefine)
+ - macros
+ - multiple textareas (make sure it works right)
+ - literal pools, =address
+ - Numbers:
+   - All can be prefixed with #
+   - ascii
+ - optional colons to mark labels
+ - /* */ block comments
+ - addr and nop
+ - @lineno (echos line number)
+ - @org (like textarea?)
+ - default textarea to 0x08000000
+ - @fsize
+ - @big and @little (endian-ness) (should support?)
+ - @include, @incbin
+ - @ascii (define as @dcb)
+ - @dcb, @dcw, @dcd (allow expressions, strings (ascii), chars)
+ - @dup
+ - ARM compilation :P
+
+Things that is does/will do better than goldroad:
+ - More ways to specify data (b,d,h suffixes)
+ - More versitile @defines (replace ANYTHING)
+ - Option to compile into ROMs
+ - Fixed addr psuedo-op
+ - And more!
+
+
+General idea of how it will assemble:
+
+tab file will store: opcode, argument type, opcode type, opcode format
+it will first narrow it down by opcode, then evaluate
+the argument type supplied. if one doesn't exist, error.
+it then gets the opcode type and ANDs the registers into the opcode
+format. the format is like this 0001110###yyyxxx
+
+argument types:
+
+ 0 - rx,ry,#
+ 1 - rx,ry,rz
+ 2 - rx,#
+ 3 - rx,ry
+ 4 - rx
+ 5 - rx,[pc,#]
+ 6 - rx,[ry,rz]
+ 7 - rx,[ry,#]
+ 8 - sp,sp,#
+ 9 - rl,lr/pc
+10 - rx,rl
+11 - cond,#
+12 - #
+
+opcode types:
+
+ 0 - rx,ry,#4
+ 1 - rx,ry,rz
+ 2 - rx,ry,#3
+ 3 - rx,#8
+ 4 - rx,ry
+ 5 - rx,ry,hh
+ 6 - sbz,rx,h
+ 7 - rx,pco
+ 8 - rx,ry,#5
+ 9 - rx,spo
+10 - #7,sbz,z
+11 - rl,lr/pc,z
+12 - rl,rx
+13 - #8,cond
+14 - #8
+15 - #11
