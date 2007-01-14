@@ -139,7 +139,7 @@ namespace ProjectGBA
 		string evalExp(string str) {
 			MatchEvaluator matchEval = new MatchEvaluator(this.matchEval);
 			//regular expression finds number, matchEval puts them into decimal
-			string decstr = Regex.Replace(str, @"\#*(0x)*\$*\%*[0-9a-fA-F]+[hdb]*", matchEval);
+			string decstr = Regex.Replace(str, @"#{0,1}(0x|\$|%){0,1}[0-9a-fA-F]+[hdb]{0,1}", matchEval);
 			int idx;
 			while((idx=decstr.IndexOf(')')) != -1) {
 				int idx2 = decstr.LastIndexOf('(', idx);
@@ -251,6 +251,9 @@ namespace ProjectGBA
 			
 			foreach(string line in lines) {
 				string tmp = line;
+				foreach(KeyValuePair<string, string> kvp in defines) {
+						tmp = tmp.Replace(kvp.Key, kvp.Value);	//replace defines
+				}
 				if(!tmp.StartsWith("@")) {
 				   	string[] parts = tmp.Split(' ');
 					string[] args = Regex.Split(parts[1], @"(?![\[\{]{1}[^,]*),(?![^,\[\{]*[\]\}]{1})"); //match commas not inside braces
@@ -259,7 +262,7 @@ namespace ProjectGBA
 							string[] subargs = args[i].Substring(1, args[1].Length - 2).Split(',');
 							
 							for(int j = 0; j < subargs.Length; ++j) {
-								System.Diagnostics.Trace.WriteLine(subargs[j]);
+								//System.Diagnostics.Trace.WriteLine(subargs[j]);
 								if(!Regex.IsMatch(subargs[j], @"r{1}\d{1,2}"))
 									subargs[j] = evalExp(subargs[j]);
 							}
@@ -284,7 +287,7 @@ namespace ProjectGBA
 		
 		void BDebugClick(object sender, EventArgs e)
 		{
-			//System.Diagnostics.Trace.WriteLine(evalExp("0x8fcef40+2"));
+			//System.Diagnostics.Trace.WriteLine(Regex.Match("#%DEADBEEF", @"#{0,1}(0x|\$|%){0,1}[0-9a-fA-F]+[hdb]{0,1}").Value);
 		}
 		
 		void MainFormLoad(object sender, EventArgs e)
