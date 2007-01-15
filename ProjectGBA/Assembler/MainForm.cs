@@ -4,10 +4,17 @@
  * Date: 1/10/2007
  * Time: 7:08 PM
  * 
- * To Fix:
+ * Todo:
+ * - Need to convert [num] to PC relative offset (subtract 12(?) because PC is always ahead)
+ *   - Need to subtract?
+ * - Need to convert offsets on branches to pc relative (must be halfword aligned, so #>>1)
+ *   - Maybe give conditional branches own opcode type to shift them
+ * - Convert BL into two opcodes
+ * - Convert add rx,pc/sp,# to add rx,[pc/sp,#] or rearrange all the argument types so the regex will work :P
  * - Support for =address
  * - Add ~ (not) and - (unary minus) to expression evaluation
  * - Make precidence matter in expressions evaluation
+ * - All error handling
  * 
  */
 
@@ -17,6 +24,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Windows.Forms;
 using System.Text.RegularExpressions;
+using System.IO;
 
 namespace ProjectGBA
 {
@@ -155,6 +163,21 @@ namespace ProjectGBA
 		
 		#endregion
 		
+		#region Assembling Functions
+		
+		int rStr2Int(string rx, bool allowHighRegisters) {
+			int rstr = Convert.ToInt32(rx.Substring(1)); //check for error
+			//don't need to check if lower than 0, regex wouldn't get it
+			if(rstr < (allowHighRegisters ? 16 : 8)) {
+				return rstr;
+			} else {
+				System.Diagnostics.Trace.WriteLine("Error: Invalid register");
+				return -1;
+			}
+		}
+		
+		#endregion
+		
 		void BAssembleClick(object sender, EventArgs e)
 		{
 			int address = 0;			//keeps track of address, etc.
@@ -283,11 +306,148 @@ namespace ProjectGBA
 			
 			tCode.Text = String.Join(Environment.NewLine, lines);
 			
+			#region Final Pass
+			
+			
+			
+			#endregion
+			
 		}
 		
 		void BDebugClick(object sender, EventArgs e)
 		{
-			//System.Diagnostics.Trace.WriteLine(Regex.Match("#%DEADBEEF", @"#{0,1}(0x|\$|%){0,1}[0-9a-fA-F]+[hdb]{0,1}").Value);
+			FileStream fs = new FileStream(Application.StartupPath + "\\opcodes.txt", FileMode.Open);
+			TextReader sr = new StreamReader(fs);
+			Dictionary<string,int[]> opcodes = new Dictionary<string,int[]>();
+			
+			string str="";
+			while(str != null) {
+				str = sr.ReadLine();
+				if(str != null) {
+					string[] parts = str.Split(' ');
+					opcodes.Add((parts[0] + parts[1]).ToLower(), new int[] {Convert.ToInt32(parts[2]), Convert.ToInt32(parts[3], 16), (parts.Length > 4) ? Convert.ToInt32(parts[4], 16) : 0});
+				}
+			}
+			
+			string[] argTypes = new string[] {
+				@"^(r13,){2}(?<num>\d*)$",
+				@"^(?<rx>r{1}\d{1,2}),(?<ry>r{1}\d{1,2}),(?<rz>r{1}\d{1,2})$",
+				@"^(?<rx>r{1}\d{1,2}),(?<ry>r{1}\d{1,2}),(?<num>\d*)$",
+				@"^(?<rx>r{1}\d{1,2}),(?<ry>r{1}\d{1,2})$",
+				@"^(?<rx>r{1}\d{1,2}),(?<num>\d*)$",
+				@"^(?<rx>r{1}\d{1,2})$",
+				@"^(?<rx>r{1}\d{1,2}),\[(r15){1},(?<num>\d*)]$",
+				@"^(?<rx>r{1}\d{1,2}),\[(r13){1},(?<num>\d*)]$",
+				@"^(?<rx>r{1}\d{1,2}),\[(?<ry>r{1}\d{1,2}),(?<rz>r{1}\d{1,2})]$",
+				@"^(?<rx>r{1}\d{1,2}),\[(?<ry>r{1}\d{1,2}),(?<num>\d*)]$",
+				@"^{(?<rl>(r{1}\d{1,2})+),(?<rx>r14|r15)}$",
+				@"^(?<rx>r{1}\d{1,2}),{(?<rl>(r{1}\d{1,2})+)}$",
+				@"^(?<num>\d*)$"
+			};
+			
+			string test = "asr r7,r0";
+			
+			string[] pieces = test.Split(' ');
+			
+			for(int i = 0; i < argTypes.Length; ++i) {
+				Match m = Regex.Match(pieces[1], argTypes[i]);
+				if(m.Success) {
+					string key = pieces[0].ToLower() + i.ToString();
+					int opType = opcodes[key][0];
+					int opBase = opcodes[key][1];
+					int altOp = opcodes[key][2];
+					int rx, ry, rz, num, opcode, hh;
+					switch(opType) {
+						case 0:
+							rx = rStr2Int(m.Groups["rx"].Value, false);
+							ry = rStr2Int(m.Groups["ry"].Value, false);
+							num = Convert.ToInt32(m.Groups["num"].Value) & 0x1f; //bitmask to 5 bits
+							opcode = opBase | rx | (ry << 3) | (num << 6);
+							System.Diagnostics.Trace.WriteLine(Convert.ToString(opcode, 16));
+							break;
+						case 1:
+							rx = rStr2Int(m.Groups["rx"].Value, false);
+							ry = rStr2Int(m.Groups["ry"].Value, false);
+							num = Convert.ToInt32(m.Groups["num"].Value) & 0xf; //bitmask to 4 bits
+							opcode = opBase | rx | (ry << 3) | (num << 6);
+							System.Diagnostics.Trace.WriteLine(Convert.ToString(opcode, 16));
+							break;
+						case 2:
+							rx = rStr2Int(m.Groups["rx"].Value, false);
+							ry = rStr2Int(m.Groups["ry"].Value, false);
+							num = Convert.ToInt32(m.Groups["num"].Value) & 0x07; //bitmask to 3 bits
+							opcode = opBase | rx | (ry << 3) | (num << 6);
+							System.Diagnostics.Trace.WriteLine(Convert.ToString(opcode, 16));
+							break;
+						case 3:
+							rx = rStr2Int(m.Groups["rx"].Value, false);
+							ry = rStr2Int(m.Groups["ry"].Value, false);
+							rz = rStr2Int(m.Groups["rz"].Value, false);
+							opcode = opBase | rx | (ry << 3) | (rz << 6);
+							System.Diagnostics.Trace.WriteLine(Convert.ToString(opcode, 16));
+							break;
+						case 4:
+							rx = rStr2Int(m.Groups["rx"].Value, true);
+							ry = rStr2Int(m.Groups["ry"].Value, true);
+							hh = ((rx & 8) >> 2) | (ry >> 3);
+							rx = rx & 7;
+							ry = ry & 7;
+							if(hh != 0) {
+								opcode = opBase | rx | (ry << 3) | (hh << 6);
+							} else {
+								opcode = altOp | rx | (ry << 3);
+							}
+							System.Diagnostics.Trace.WriteLine(Convert.ToString(opcode, 16));
+							break;
+						case 5:
+							break;
+						case 6:
+							break;
+						case 7:
+							rx = rStr2Int(m.Groups["rx"].Value, false);
+							num = Convert.ToInt32(m.Groups["num"].Value) & 0xff; //bitmask to 8 bits
+							opcode = opBase | num | (rx << 8);
+							System.Diagnostics.Trace.WriteLine(Convert.ToString(opcode, 16));
+							break;
+						case 8:
+							rx = rStr2Int(m.Groups["rx"].Value, false);
+							ry = rStr2Int(m.Groups["ry"].Value, false);
+							opcode = opBase | rx | (ry << 3);
+							System.Diagnostics.Trace.WriteLine(Convert.ToString(opcode, 16));
+							break;
+						case 9:
+							rx = rStr2Int(m.Groups["rx"].Value, false);
+							num = ((Convert.ToInt32(m.Groups["num"].Value) >> 2)) & 0xff; //bitmask to 8 bits
+							opcode = opBase | num | (rx << 8);
+							System.Diagnostics.Trace.WriteLine(Convert.ToString(opcode, 16));
+							break;
+						case 10:
+							rx = rStr2Int(m.Groups["rx"].Value, false);
+							ry = rStr2Int(m.Groups["ry"].Value, false);
+							num = (Convert.ToInt32(m.Groups["num"].Value) >> 2) & 0x1f; //bitmask to 5 bits
+							opcode = opBase | rx | (ry << 3) | (num << 6);
+							System.Diagnostics.Trace.WriteLine(Convert.ToString(opcode, 16));
+							break;
+						case 11:
+							break;
+						case 12:
+							break;
+						case 13:
+							num = Convert.ToInt32(m.Groups["num"].Value) & 0xff; //bitmask to 8 bits
+							opcode = opBase | num;
+							System.Diagnostics.Trace.WriteLine(Convert.ToString(opcode, 16));
+							break;
+						case 14: //branches
+							num = Convert.ToInt32(m.Groups["num"].Value) & 0xff; //bitmask to 11 bits
+							opcode = opBase | num;
+							System.Diagnostics.Trace.WriteLine(Convert.ToString(opcode, 16));
+							break;
+						
+					}
+					break;
+				} 
+				
+			}
 		}
 		
 		void MainFormLoad(object sender, EventArgs e)

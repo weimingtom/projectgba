@@ -1,3 +1,36 @@
+Currently Working Opcodes:
+
+ADC
+ADD
+AND
+ASR
+
+Figure out BX/BLX.. SBZ?
+
+Is there BLX? (bl switch to arm, second bl opcode)
+- Reference sheet says undefined
+- no$gba has it
+
+LDRH needs it's own opcode type
+- thumbref says # >> 2
+- but no$gba says 0-61 (shifted 1)
+- need to change this in opcode file
+
+Should it use LDRSB or LDSB?
+- Go with goldroad first
+- Support both
+
+Need to do this:
+- Attempts to specify LSR/ASR#0 in source code are automatically
+  redirected as LSL#0, and source LSR/ASR#32 is redirected as opcode
+  LSR/ASR#0.
+
+Read through no$gba help and make sure everything is right
+
+Make sure signed numbers work with ones they're supposed
+and give errors when they're not
+- example: add,sp,#
+
 Things to add so compatible with goldroad:
  - Expressions:
    - ~ (NOT) and - (UNARY MINUS)
@@ -17,6 +50,7 @@ Things to add so compatible with goldroad:
  - optional colons to mark labels
  - /* */ block comments
  - addr and nop
+   - nop is mov r8,r8
  - @lineno (echos line number)
  - @org (like textarea?)
  - default textarea to 0x08000000
@@ -35,46 +69,63 @@ Things that is does/will do better than goldroad:
  - Fixed addr psuedo-op
  - And more!
 
+General idea of how it assembles:
 
-General idea of how it will assemble:
+tab file will store: opcode, argument type, opcode type, opcode base
+it selects the line by the opcode and argument type if one doesn't
+exist, error. it then gets the opcode type and ORs the arguments into
+the opcode base according to the opcode type.
 
-tab file will store: opcode, argument type, opcode type, opcode format
-it will first narrow it down by opcode, then evaluate
-the argument type supplied. if one doesn't exist, error.
-it then gets the opcode type and ANDs the registers into the opcode
-format. the format is like this 0001110###yyyxxx
+There is an optional, alternate opcode for arguments that accept high
+registers only that it will use if no high registers are supplied.
+
+example: add r0,r1 compiles to add r0,r1,0x1
+(it does the same in goldroad, but this doesn't seem right..)
 
 argument types:
 
- 0 - rx,ry,#
+ 0 - sp,sp,#
  1 - rx,ry,rz
- 2 - rx,#
+ 2 - rx,ry,#
  3 - rx,ry
- 4 - rx
- 5 - rx,[pc,#]
- 6 - rx,[ry,rz]
- 7 - rx,[ry,#]
- 8 - sp,sp,#
- 9 - rl,lr/pc
-10 - rx,rl
-11 - cond,#
+ 4 - rx,#
+ 5 - rx
+ 6 - rx,[pc,#]
+ 7 - rx,[sp,#]
+ 8 - rx,[ry,rz]
+ 9 - rx,[ry,#]
+10 - {rl,lr/pc}
+11 - rx,{rl}
 12 - #
+
+^(r13,){2}(?<num>\d*)$
+^(?<rx>r{1}\d{1,2}),(?<ry>r{1}\d{1,2}),(?<rz>r{1}\d{1,2})$
+^(?<rx>r{1}\d{1,2}),(?<ry>r{1}\d{1,2}),(?<num>\d*)$
+^(?<rx>r{1}\d{1,2}),(?<ry>r{1}\d{1,2})$
+^(?<rx>r{1}\d{1,2}),(?<num>\d*)$
+^(?<rx>r{1}\d{1,2})$
+^(?<rx>r{1}\d{1,2}),\[(r15){1},(?<num>\d*)]$
+^(?<rx>r{1}\d{1,2}),\[(r13){1},(?<num>\d*)]$
+^(?<rx>r{1}\d{1,2}),\[(?<ry>r{1}\d{1,2}),(?<rz>r{1}\d{1,2})]$
+^(?<rx>r{1}\d{1,2}),\[(?<ry>r{1}\d{1,2}),(?<num>\d*)]$
+^{(?<rl>(r{1}\d{1,2})+),(?<rx>r14|r15)}$
+^(?<rx>r{1}\d{1,2}),{(?<rl>(r{1}\d{1,2})+)}$
+^(?<num>\d*)$
 
 opcode types:
 
- 0 - rx,ry,#4
- 1 - rx,ry,rz
+ 0 - rx,ry,#5
+ 1 - rx,ry,#4
  2 - rx,ry,#3
- 3 - rx,#8
- 4 - rx,ry
- 5 - rx,ry,hh
- 6 - sbz,rx,h
- 7 - rx,pco
- 8 - rx,ry,#5
- 9 - rx,spo
-10 - #7,sbz,z
+ 3 - rx,ry,rz
+ 4 - rx,ry,hh
+ 5 - sbz,rx,h
+ 6 - #7,sbz,z
+ 7 - rx,#8
+ 8 - rx,ry
+ 9 - rx,#10>>2
+10 - rx, ry, #7>>2
 11 - rl,lr/pc,z
 12 - rl,rx
-13 - #8,cond
-14 - #8
-15 - #11
+13 - #8
+14 - #11
