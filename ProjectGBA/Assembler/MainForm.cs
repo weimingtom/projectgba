@@ -442,6 +442,13 @@ namespace ProjectGBA
 							opcode = opBase | num;
 							System.Diagnostics.Trace.WriteLine(Convert.ToString(opcode, 16));
 							break;
+						case 15: //halfword things
+							rx = rStr2Int(m.Groups["rx"].Value, false);
+							ry = rStr2Int(m.Groups["ry"].Value, false);
+							num = (Convert.ToInt32(m.Groups["num"].Value) >> 1) & 0x1f; //bitmask to 5 bits
+							opcode = opBase | rx | (ry << 3) | (num << 6);
+							System.Diagnostics.Trace.WriteLine(Convert.ToString(opcode, 16));
+							break;
 						
 					}
 					break;
