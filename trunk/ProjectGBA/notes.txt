@@ -1,4 +1,8 @@
-Currently Working Opcodes:
+Done:
+- 99% sure tab file is correct and complete
+
+
+Tested Working Opcodes:
 
 ADC
 ADD
@@ -7,29 +11,27 @@ ASR
 
 Figure out BX/BLX.. SBZ?
 
-Is there BLX? (bl switch to arm, second bl opcode)
+Is there BLX? (bl and bx versions)
 - Reference sheet says undefined
 - no$gba has it
-
-LDRH needs it's own opcode type
-- thumbref says # >> 2
-- but no$gba says 0-61 (shifted 1)
-- need to change this in opcode file
+- only in ARM9? (not gba?)
 
 Should it use LDRSB or LDSB?
-- Go with goldroad first
 - Support both
+- goldroad screws it up..
+- officially probably LDSB
 
 Need to do this:
 - Attempts to specify LSR/ASR#0 in source code are automatically
   redirected as LSL#0, and source LSR/ASR#32 is redirected as opcode
   LSR/ASR#0.
 
-Read through no$gba help and make sure everything is right
-
 Make sure signed numbers work with ones they're supposed
 and give errors when they're not
-- example: add,sp,#
+- example: add sp,sp,#
+- sub sp,sp,# is the same with sign bit (convert to this if neg?)
+
+Read through no$gba help and make sure everything is right
 
 Things to add so compatible with goldroad:
  - Expressions:
@@ -129,3 +131,4 @@ opcode types:
 12 - rl,rx
 13 - #8
 14 - #11
+15 - rx, ry, #6>>1
