@@ -1,6 +1,13 @@
 Done:
-- 99% sure tab file is correct and complete
+- 100% sure tab file is correct
+- 99% sure tab file is complete
+- assembles all below instructions
 
+Todo:
+- Convert BL into parts, other jumps into correct numbers for opcodes
+- Parse other things so everything assembles perfectly
+- Verbose error messages (word alignment, etc.)
+  - Needs to error on BLX r15 (not possible)
 
 Tested Working Opcodes:
 
@@ -8,13 +15,56 @@ ADC
 ADD
 AND
 ASR
-
-Figure out BX/BLX.. SBZ?
-
-Is there BLX? (bl and bx versions)
-- Reference sheet says undefined
-- no$gba has it
-- only in ARM9? (not gba?)
+B
+BEQ
+BNE
+BCS
+BHS
+BCC
+BLO
+BMI
+BPL
+BVS
+BVC
+BHI
+BLS
+BGE
+BLT
+BGT
+BLE
+BIC
+BKPT
+BL1
+BL2
+BLX
+BX
+CMN
+CMP
+EOR
+LDMIA
+LDR
+LDRB
+LDRH
+LDSB
+LDSH
+LSL
+LSR
+MOV
+MUL
+MVN
+NEG
+ORR
+POP
+PUSH
+ROR
+SBC
+STMIA
+STR
+STRB
+STRH
+SUB
+SWI
+TST
 
 Should it use LDRSB or LDSB?
 - Support both
@@ -29,7 +79,7 @@ Need to do this:
 Make sure signed numbers work with ones they're supposed
 and give errors when they're not
 - example: add sp,sp,#
-- sub sp,sp,# is the same with sign bit (convert to this if neg?)
+- sub sp,sp,# is the same with sign bit (convert to this if arg in first is neg)
 
 Read through no$gba help and make sure everything is right
 
@@ -73,7 +123,7 @@ Things that is does/will do better than goldroad:
 
 General idea of how it assembles:
 
-tab file will store: opcode, argument type, opcode type, opcode base
+tab file stores: opcode, argument type, opcode type, opcode base
 it selects the line by the opcode and argument type if one doesn't
 exist, error. it then gets the opcode type and ORs the arguments into
 the opcode base according to the opcode type.
@@ -110,8 +160,8 @@ argument types:
 ^(?<rx>r{1}\d{1,2}),\[(r13){1},(?<num>\d*)]$
 ^(?<rx>r{1}\d{1,2}),\[(?<ry>r{1}\d{1,2}),(?<rz>r{1}\d{1,2})]$
 ^(?<rx>r{1}\d{1,2}),\[(?<ry>r{1}\d{1,2}),(?<num>\d*)]$
-^{(?<rl>(r{1}\d{1,2})+),(?<rx>r14|r15)}$
-^(?<rx>r{1}\d{1,2}),{(?<rl>(r{1}\d{1,2})+)}$
+^{(?<rl>.+)(?:,(?<rx>r14|r15))?}$
+^(?<rx>r{1}\d{1,2})!,{(?<rl>[^}]+)}$
 ^(?<num>\d*)$
 
 opcode types:

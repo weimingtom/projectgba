@@ -176,6 +176,25 @@ namespace ProjectGBA
 			}
 		}
 		
+		int rList2Int(string rl) {
+			string[] rs = rl.Split(new char[] {','});
+			int ret = 0;
+			for(int i = 0; i < rs.Length; i++) {
+				Match m = Regex.Match(rs[i], @"r(\d)-r(\d)");
+				if(m.Success) {
+					int r1 = Convert.ToInt32(m.Groups[1].Value);
+					int r2 = Convert.ToInt32(m.Groups[2].Value);
+					for(int j = r1; j <= r2; j++) {
+						ret |= 1 << j;
+					}
+				} else {
+					ret |= 1 << Convert.ToInt32(rs[i].Substring(1));
+				}
+			}
+			
+			return ret;
+		}
+		
 		#endregion
 		
 		void BAssembleClick(object sender, EventArgs e)
@@ -340,12 +359,12 @@ namespace ProjectGBA
 				@"^(?<rx>r{1}\d{1,2}),\[(r13){1},(?<num>\d*)]$",
 				@"^(?<rx>r{1}\d{1,2}),\[(?<ry>r{1}\d{1,2}),(?<rz>r{1}\d{1,2})]$",
 				@"^(?<rx>r{1}\d{1,2}),\[(?<ry>r{1}\d{1,2}),(?<num>\d*)]$",
-				@"^{(?<rl>(r{1}\d{1,2})+),(?<rx>r14|r15)}$",
-				@"^(?<rx>r{1}\d{1,2}),{(?<rl>(r{1}\d{1,2})+)}$",
+				@"^{(?<rl>(?:r\d[,-]*)+)?,?(?<rx>r14|r15)?}$",
+				@"^(?<rx>r{1}\d{1,2})!,{(?<rl>[^}]+)}$",
 				@"^(?<num>\d*)$"
 			};
 			
-			string test = "asr r7,r0";
+			string test = "add r0,r1";
 			
 			string[] pieces = test.Split(' ');
 			
@@ -356,7 +375,7 @@ namespace ProjectGBA
 					int opType = opcodes[key][0];
 					int opBase = opcodes[key][1];
 					int altOp = opcodes[key][2];
-					int rx, ry, rz, num, opcode, hh;
+					int rx, ry, rz, rl, num, opcode, hh;
 					switch(opType) {
 						case 0:
 							rx = rStr2Int(m.Groups["rx"].Value, false);
@@ -400,8 +419,14 @@ namespace ProjectGBA
 							System.Diagnostics.Trace.WriteLine(Convert.ToString(opcode, 16));
 							break;
 						case 5:
+							rx = rStr2Int(m.Groups["rx"].Value, true);
+							opcode = opBase | (rx << 3);
+							System.Diagnostics.Trace.WriteLine(Convert.ToString(opcode, 16));
 							break;
 						case 6:
+							num = ((Convert.ToInt32(m.Groups["num"].Value) >> 2)) & 0x7f;
+							opcode = opBase | num;
+							System.Diagnostics.Trace.WriteLine(Convert.ToString(opcode, 16));
 							break;
 						case 7:
 							rx = rStr2Int(m.Groups["rx"].Value, false);
@@ -429,8 +454,17 @@ namespace ProjectGBA
 							System.Diagnostics.Trace.WriteLine(Convert.ToString(opcode, 16));
 							break;
 						case 11:
+							rx = m.Groups["rx"].Success ? rStr2Int(m.Groups["rx"].Value, true) : 0; //lr or pc
+							rl = m.Groups["rl"].Success ? rList2Int(m.Groups["rl"].Value) : 0;
+							int bit = ((rx == 15 && pieces[0].ToLower() == "pop") || (rx == 14 && pieces[0].ToLower() == "push")) ? 1 : 0;
+							opcode = opBase | rl | (bit << 8);
+							System.Diagnostics.Trace.WriteLine(Convert.ToString(opcode, 16));
 							break;
 						case 12:
+							rx = rStr2Int(m.Groups["rx"].Value, false);
+							rl = rList2Int(m.Groups["rl"].Value);
+							opcode = opBase | rl | (rx << 8);
+							System.Diagnostics.Trace.WriteLine(Convert.ToString(opcode, 16));
 							break;
 						case 13:
 							num = Convert.ToInt32(m.Groups["num"].Value) & 0xff; //bitmask to 8 bits
@@ -438,7 +472,7 @@ namespace ProjectGBA
 							System.Diagnostics.Trace.WriteLine(Convert.ToString(opcode, 16));
 							break;
 						case 14: //branches
-							num = Convert.ToInt32(m.Groups["num"].Value) & 0xff; //bitmask to 11 bits
+							num = Convert.ToInt32(m.Groups["num"].Value) & 0x7ff; //bitmask to 11 bits
 							opcode = opBase | num;
 							System.Diagnostics.Trace.WriteLine(Convert.ToString(opcode, 16));
 							break;
@@ -455,6 +489,9 @@ namespace ProjectGBA
 				} 
 				
 			}
+			
+			sr.Dispose();
+			fs.Dispose();
 		}
 		
 		void MainFormLoad(object sender, EventArgs e)
