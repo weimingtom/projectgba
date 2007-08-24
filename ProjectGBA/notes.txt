@@ -66,11 +66,6 @@ SUB
 SWI
 TST
 
-Should it use LDRSB or LDSB?
-- Support both
-- goldroad screws it up..
-- officially probably LDSB
-
 Need to do this:
 - Attempts to specify LSR/ASR#0 in source code are automatically
   redirected as LSL#0, and source LSR/ASR#32 is redirected as opcode
