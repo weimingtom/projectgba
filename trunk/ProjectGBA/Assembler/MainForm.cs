@@ -63,14 +63,14 @@ namespace ProjectGBA
 		#region Parsing and Expressions
 		
 		int parseInt(string str) {
-			string[] prefixes = new string[] {"0x","#0x","$","%"};	//prefixes
-			int[] bases = new int[] {16, 16, 16, 2};				//corresponding bases
+			string[] prefixes = new string[] {"0x","#0x","$","#","%"};	//prefixes
+			int[] bases = new int[] {16, 16, 16, 10, 2};				//corresponding bases
 			for(int i = 0; i < prefixes.Length; ++i) {
 				if(str.StartsWith(prefixes[i]))
 					return Convert.ToInt32(str.Substring(prefixes[i].Length), bases[i]);
 			}
-			string[] suffixes = new string[] {"h","d","b"};		//suffixes
-			bases = new int[] {16, 10, 2};						//corresponding bases
+			string[] suffixes = new string[] {"h","d","#","b"};		//suffixes
+			bases = new int[] {16, 10, 10, 2};						//corresponding bases
 			for(int i = 0; i < suffixes.Length; ++i) {
 				if(str.EndsWith(suffixes[i]))
 					return Convert.ToInt32(str.Substring(0,str.LastIndexOf(suffixes[i])), bases[i]);
@@ -90,6 +90,7 @@ namespace ProjectGBA
 		string eval(string exp) {
 			//needs precidence
 			//need to evaluate ~ and unary -
+			System.Diagnostics.Trace.WriteLine("Evaluting: " + exp);
 			try {
 				return Convert.ToString(parseInt(exp)); //return parsed number if possible
 			} catch {
@@ -239,6 +240,8 @@ namespace ProjectGBA
 								case "@define":
 									System.Diagnostics.Trace.WriteLine("Define Added: " + args[1] + " = " + args[2]);
 									defines.Add(args[1], args[2]);
+									if(!defines.ContainsKey(args[1].ToLower()))
+										defines.Add(args[1].ToLower(), args[2]);
 									addLine = false;
 									break;
 								case "@echo":
@@ -249,6 +252,10 @@ namespace ProjectGBA
 									break;
 								case "@endarea":
 									System.Diagnostics.Trace.WriteLine("== End Area ==");
+									break;
+								case "@org":
+									System.Diagnostics.Trace.WriteLine("== Org: " + args[1] + " ==");
+									address = parseInt(args[1]);
 									break;
 								case "@textarea":
 									System.Diagnostics.Trace.WriteLine("== Area: " + args[1] + " ==");
@@ -267,9 +274,12 @@ namespace ProjectGBA
 								System.Diagnostics.Trace.WriteLine("OPCODE: " + args[0]);
 								address += 2; //each opcode is 2 bytes? (except for bl?)
 							} else {
+								args[0] = args[0].TrimEnd(new char[] { ':' });
 								string addressStr = "0x" + Convert.ToString(address, 16);
 								System.Diagnostics.Trace.WriteLine("Label: " + args[0] + " = " + addressStr);
 								defines.Add(args[0], addressStr);
+								if(!defines.ContainsKey(args[0].ToLower()))
+									defines.Add(args[0].ToLower(), addressStr); //not case-sensitive for now
 								addLine = false;
 							}
 						}
@@ -277,7 +287,7 @@ namespace ProjectGBA
 						addLine = false; //remove empty lines
 					}
 					if(addLine)
-						nextLines.Add(tmp);
+						nextLines.Add(tmp.ToLower());
 				}
 				lines = new string[nextLines.Count];
 				nextLines.CopyTo(lines);
@@ -287,6 +297,11 @@ namespace ProjectGBA
 			} while(needsToBeParsed);
 			
 			#endregion
+			
+			System.Diagnostics.Trace.WriteLine("== Defines so far ==\n");
+			foreach(KeyValuePair<string, string> kvp in defines) {
+				System.Diagnostics.Trace.WriteLine(kvp.Key + " = " + kvp.Value);
+			}
 			
 			// The second pass evaluates expressions in arguments
 			#region Second Pass
@@ -298,7 +313,7 @@ namespace ProjectGBA
 				}
 				if(!tmp.StartsWith("@")) {
 				   	string[] parts = tmp.Split(' ');
-					string[] args = Regex.Split(parts[1], @"(?![\[\{]{1}[^,]*),(?![^,\[\{]*[\]\}]{1})"); //match commas not inside braces
+				   	string[] args = Regex.Split(parts[1], @"(?<![[{].*),");//@"(?![\[\{]{1}[^,]*),(?![^,\[\{]*[\]\}]{1})"); //match commas not inside braces
 					for(int i = 0; i < args.Length; ++i) {
 						if(args[i].StartsWith("[")) {
 							string[] subargs = args[i].Substring(1, args[1].Length - 2).Split(',');
@@ -310,8 +325,13 @@ namespace ProjectGBA
 							}
 							args[i] = "[" + String.Join(",",subargs) + "]";
 						}
-						if(!Regex.IsMatch(args[i], @"r{1}\d{1,2}")) //only if not r0-15
-						   args[i] = evalExp(args[i]);
+						System.Diagnostics.Trace.WriteLine("Argument: " + args[i]);
+						if(!Regex.IsMatch(args[i], @"r{1}\d{1,2}")) { //only if not r0-15
+							if(args[i].StartsWith("="))
+								args[i] = "=" + evalExp(args[i].Substring(1));
+							else
+						    	args[i] = evalExp(args[i]);
+						}
 					}
 					parts[1] = String.Join(",",args);
 					tmp = String.Join(" ", parts);
@@ -364,7 +384,7 @@ namespace ProjectGBA
 				@"^(?<num>\d*)$"
 			};
 			
-			string test = "add r0,r1";
+			string test = "ldmia r0!,{r0-r7}";
 			
 			string[] pieces = test.Split(' ');
 			
