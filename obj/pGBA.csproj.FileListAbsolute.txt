@@ -1,7 +1,0 @@
-C:\Documents and Settings\Administrator\My Documents\SharpDevelop Projects\pGBA\bin\Debug\pGBA.exe
-C:\Documents and Settings\Administrator\My Documents\SharpDevelop Projects\pGBA\bin\Debug\pGBA.pdb
-C:\Documents and Settings\Administrator\My Documents\SharpDevelop Projects\pGBA\obj\Debug\ResolveAssemblyReference.cache
-C:\Documents and Settings\Administrator\My Documents\SharpDevelop Projects\pGBA\obj\Debug\pGBA.MainForm.resources
-C:\Documents and Settings\Administrator\My Documents\SharpDevelop Projects\pGBA\obj\Debug\pGBA.csproj.GenerateResource.Cache
-C:\Documents and Settings\Administrator\My Documents\SharpDevelop Projects\pGBA\obj\Debug\pGBA.exe
-C:\Documents and Settings\Administrator\My Documents\SharpDevelop Projects\pGBA\obj\Debug\pGBA.pdb
