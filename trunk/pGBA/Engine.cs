@@ -17,13 +17,13 @@ namespace pGBA
 	public class Engine
 	{
 		//Universal Constants
-		public Armcpu myARM;
+		public Armcpu myCPU;
 		public Memory myMemory;
 		
 		
 		public Engine()
 		{
-			myARM = new Armcpu(this);
+			myCPU = new Armcpu(this);
 			myMemory = new Memory();
 		}
 	}
