@@ -30,7 +30,7 @@ namespace pGBA
 		public ushort ReadShort(uint adr)
 		{
 			//Needs to be implemented
-			MessageBox.Show("ReadShort(0x"+Convert.ToString(adr,16)+");");
+			//MessageBox.Show("ReadShort(0x"+Convert.ToString(adr,16)+");");
 			return (ushort)0;
 		}
 		

@@ -49,7 +49,7 @@ namespace pGBA
 			while(i++!=159) Scrn.SetPixel(239,i,Color.FromArgb(255,0,0));
 			scrnBox.Image = Scrn;
 			
-			myEngine.myARM.Emulate(1);
+			myEngine.myCPU.Emulate(2);
 		}
 	}
 }
