@@ -19,6 +19,7 @@ namespace pGBA
 	public partial class DisassemblerForm : Form
 	{
 		private Engine myEngine;
+		private Disassembler disasm;
 		
 		public DisassemblerForm(Engine engine)
 		{
@@ -33,18 +34,29 @@ namespace pGBA
 			timer.Start();
 			myEngine = engine;
 			
+			disasm = new Disassembler(engine);
+			
 			RefreshRegisterList();
+			RefreshDisasmList();
+		}
+		
+		void RefreshDisasmList()
+		{
+			int i=0;
+			
+			for(i=0; i<17; i++)
+			{
+				disasmList.Items[i] = disasm.DisasmThumb(0);
+			}
 		}
 		
 		void RefreshRegisterList()
 		{
 			int i=0;
-			int padding=0;
 			
 			for(i=0; i<17; i++)
 			{
-				padding = 9-Convert.ToString(myEngine.myCPU.Registers[i],16).Length;
-				regList.Items[i] = "R"+Convert.ToString(i)+" = 0x"+Convert.ToString(myEngine.myCPU.Registers[i],16).ToUpper().PadLeft(padding,'0');
+				regList.Items[i] = "R"+i.ToString()+" = 0x"+Convert.ToString(myEngine.myCPU.Registers[i],16).ToUpper().PadLeft(8,'0');
 			}
 		
 		}
