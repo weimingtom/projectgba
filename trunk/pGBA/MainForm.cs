@@ -44,12 +44,31 @@ namespace pGBA
 			i=0;
 			while(i++!=239) Scrn.SetPixel(i,159,Color.FromArgb(255,0,255));
 			i=0;
-			while(i++!=159) Scrn.SetPixel(0,i,Color.FromArgb(255,0,255));
+			while(i++!=159) Scrn.SetPixel(0,i,Color.FromArgb(255,255,255));
 			i=0;
 			while(i++!=159) Scrn.SetPixel(239,i,Color.FromArgb(255,0,0));
 			scrnBox.Image = Scrn;
 			
 			myEngine.myCPU.Emulate(2);
+		}
+		
+		void OpenGBAToolStripMenuItemClick(object sender, EventArgs e)
+		{
+			openFileDialog.ShowDialog();
+		}
+		
+		void ExitToolStripMenuItemClick(object sender, EventArgs e)
+		{
+			this.Close();
+		}
+		
+		void DisassemblerToolStripMenuItemClick(object sender, EventArgs e)
+		{
+			DisassemblerForm form;
+			
+			form = new DisassemblerForm(myEngine);
+			
+			form.Show();
 		}
 	}
 }

@@ -17,6 +17,9 @@ namespace pGBA
 	/// </summary>
 	public class Memory
 	{
+		
+		public uint[] rom;
+		
 		public Memory()
 		{
 		}
