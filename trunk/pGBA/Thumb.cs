@@ -59,7 +59,7 @@ namespace pGBA
 			myEngine = engine;
 		}
 		
-		#region Flag helpers
+		#region Overflow Handlers
         public void OverflowCarryAdd(uint a, uint b, uint r)
         {
             overflow = ((a & b & ~r) | (~a & ~b & r)) >> 31;
@@ -78,9 +78,9 @@ namespace pGBA
 		{
 			// 0x00 - 0x07
             // lsl rd, rm, #immed
-			int rd = this.opcode & 0x7;
-            int rm = (this.opcode >> 3) & 0x7;
-            int immed = (this.opcode >> 6) & 0x1F;
+			int rd = opcode & 0x7;
+            int rm = (opcode >> 3) & 0x7;
+            int immed = (opcode >> 6) & 0x1F;
 
             if (immed == 0)
             {
@@ -91,7 +91,7 @@ namespace pGBA
                 myEngine.myCPU.Registers[rd] = myEngine.myCPU.Registers[rm] << immed;
             }
 
-            negative = myEngine.myCPU.Registers[rd] >> 31;
+            negative = myEngine.myCPU.Registers[rd] >> Armcpu.N_BIT;
             zero = myEngine.myCPU.Registers[rd] == 0 ? 1U : 0U;
 
 			cycles = 1;
@@ -120,7 +120,8 @@ namespace pGBA
 			byte	opcode_11_5, opcode_6_5, opcode_9_3;
 			uint 	address=myEngine.myCPU.Registers[15];
 			
-			opcode		= myEngine.myMemory.ReadShort(address);
+			cycles		= 1; //Only here incase i forget to set the cycles for an opcode and it creates an infinite loop
+			opcode		= 0x0088; //myEngine.myMemory.ReadShort(address);
 			opcode_11_5	= (byte)((opcode >> 11) & 0x11);	/*11-15 5bit*/
 			opcode_6_5	= (byte)((opcode >> 6) & 0x1F);
 			opcode_9_3	= (byte)((opcode >> 9) & 0x07);
@@ -138,7 +139,7 @@ namespace pGBA
 				//thumb_asr_imm();/*ASR Rd,Rs,#Offset5 - 1*/
 				break;
 			case 0x03:	/*00011*/
-				//if(BIT_N(opcode,9)){
+				//if((bool)((opcode >> 9)&0x01)){
 				//	arm7tdmi_thumb_sub();/*Œ¸ŽZ - 2*/
 				//}else{
 				//	arm7tdmi_thumb_add();/*‰ÁŽZ - 2*/
