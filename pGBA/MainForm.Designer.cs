@@ -39,9 +39,15 @@ namespace pGBA
 			this.scrnBox = new System.Windows.Forms.PictureBox();
 			this.menuStrip = new System.Windows.Forms.MenuStrip();
 			this.fileToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.openGBAToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
+			this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.statusStrip = new System.Windows.Forms.StatusStrip();
 			this.FPS_Indicator = new System.Windows.Forms.ToolStripStatusLabel();
+			this.openFileDialog = new System.Windows.Forms.OpenFileDialog();
+			this.toolsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.disassemblerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			((System.ComponentModel.ISupportInitialize)(this.scrnBox)).BeginInit();
 			this.menuStrip.SuspendLayout();
 			this.statusStrip.SuspendLayout();
@@ -59,6 +65,7 @@ namespace pGBA
 			// 
 			this.menuStrip.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
 									this.fileToolStripMenuItem,
+									this.toolsToolStripMenuItem,
 									this.aboutToolStripMenuItem});
 			this.menuStrip.Location = new System.Drawing.Point(0, 0);
 			this.menuStrip.Name = "menuStrip";
@@ -68,9 +75,32 @@ namespace pGBA
 			// 
 			// fileToolStripMenuItem
 			// 
+			this.fileToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+									this.openGBAToolStripMenuItem,
+									this.toolStripSeparator1,
+									this.exitToolStripMenuItem});
 			this.fileToolStripMenuItem.Name = "fileToolStripMenuItem";
 			this.fileToolStripMenuItem.Size = new System.Drawing.Size(35, 20);
 			this.fileToolStripMenuItem.Text = "&File";
+			// 
+			// openGBAToolStripMenuItem
+			// 
+			this.openGBAToolStripMenuItem.Name = "openGBAToolStripMenuItem";
+			this.openGBAToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+			this.openGBAToolStripMenuItem.Text = "&Open GBA";
+			this.openGBAToolStripMenuItem.Click += new System.EventHandler(this.OpenGBAToolStripMenuItemClick);
+			// 
+			// toolStripSeparator1
+			// 
+			this.toolStripSeparator1.Name = "toolStripSeparator1";
+			this.toolStripSeparator1.Size = new System.Drawing.Size(149, 6);
+			// 
+			// exitToolStripMenuItem
+			// 
+			this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
+			this.exitToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+			this.exitToolStripMenuItem.Text = "&Exit";
+			this.exitToolStripMenuItem.Click += new System.EventHandler(this.ExitToolStripMenuItemClick);
 			// 
 			// aboutToolStripMenuItem
 			// 
@@ -94,6 +124,25 @@ namespace pGBA
 			this.FPS_Indicator.Size = new System.Drawing.Size(29, 17);
 			this.FPS_Indicator.Text = "FPS:";
 			// 
+			// openFileDialog
+			// 
+			this.openFileDialog.Filter = "GBA Rom files (*.gba)|*.gba";
+			// 
+			// toolsToolStripMenuItem
+			// 
+			this.toolsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+									this.disassemblerToolStripMenuItem});
+			this.toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
+			this.toolsToolStripMenuItem.Size = new System.Drawing.Size(44, 20);
+			this.toolsToolStripMenuItem.Text = "&Tools";
+			// 
+			// disassemblerToolStripMenuItem
+			// 
+			this.disassemblerToolStripMenuItem.Name = "disassemblerToolStripMenuItem";
+			this.disassemblerToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+			this.disassemblerToolStripMenuItem.Text = "&Disassembler";
+			this.disassemblerToolStripMenuItem.Click += new System.EventHandler(this.DisassemblerToolStripMenuItemClick);
+			// 
 			// MainForm
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -102,7 +151,9 @@ namespace pGBA
 			this.Controls.Add(this.statusStrip);
 			this.Controls.Add(this.scrnBox);
 			this.Controls.Add(this.menuStrip);
+			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
 			this.MainMenuStrip = this.menuStrip;
+			this.MaximizeBox = false;
 			this.Name = "MainForm";
 			this.Text = "pGBA";
 			this.Load += new System.EventHandler(this.MainFormLoad);
@@ -114,6 +165,12 @@ namespace pGBA
 			this.ResumeLayout(false);
 			this.PerformLayout();
 		}
+		private System.Windows.Forms.ToolStripMenuItem disassemblerToolStripMenuItem;
+		private System.Windows.Forms.ToolStripMenuItem toolsToolStripMenuItem;
+		private System.Windows.Forms.OpenFileDialog openFileDialog;
+		private System.Windows.Forms.ToolStripMenuItem exitToolStripMenuItem;
+		private System.Windows.Forms.ToolStripSeparator toolStripSeparator1;
+		private System.Windows.Forms.ToolStripMenuItem openGBAToolStripMenuItem;
 		private System.Windows.Forms.ToolStripStatusLabel FPS_Indicator;
 		private System.Windows.Forms.StatusStrip statusStrip;
 		private System.Windows.Forms.ToolStripMenuItem aboutToolStripMenuItem;

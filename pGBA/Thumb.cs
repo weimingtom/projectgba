@@ -125,6 +125,8 @@ namespace pGBA
 			opcode_6_5	= (byte)((opcode >> 6) & 0x1F);
 			opcode_9_3	= (byte)((opcode >> 9) & 0x07);
 			
+			UnpackFlags();
+			
 			switch(opcode_11_5){
 			case 0x00:	/*00000*/
 				thumb_lsl_imm();/*LSL Rd,Rs,#Offset5 - 1*/
@@ -338,6 +340,8 @@ namespace pGBA
 			default:
 				break;
 			}
+			
+			PackFlags();
 			
 			myEngine.myCPU.Registers[15] += 2;
 			
