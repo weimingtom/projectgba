@@ -8,6 +8,7 @@
  */
 
 using System;
+using System.IO;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
@@ -48,13 +49,28 @@ namespace pGBA
 			i=0;
 			while(i++!=159) Scrn.SetPixel(239,i,Color.FromArgb(255,0,0));
 			scrnBox.Image = Scrn;
-			
-			myEngine.myCPU.Emulate(2);
 		}
 		
 		void OpenGBAToolStripMenuItemClick(object sender, EventArgs e)
 		{
-			openFileDialog.ShowDialog();
+			if (openFileDialog.ShowDialog() == DialogResult.OK)
+            {
+				using (Stream stream = openFileDialog.OpenFile())
+                {
+                    uint romSize = 1;
+                    while (romSize < stream.Length)
+                    {
+                        romSize <<= 1;
+                    }
+
+                    byte[] rom = new byte[romSize];
+                    stream.Read(rom, 0, (int)stream.Length);
+                    
+                    myEngine.myMemory.romSize=romSize;
+
+                    myEngine.myMemory.LoadRom(rom);
+                }
+			}
 		}
 		
 		void ExitToolStripMenuItemClick(object sender, EventArgs e)

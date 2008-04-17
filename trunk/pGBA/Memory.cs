@@ -18,7 +18,9 @@ namespace pGBA
 	public class Memory
 	{
 		
-		public uint[] rom;
+		public byte[] rom;
+		public bool romLoaded=false;
+		public uint romSize;
 		
 		public Memory()
 		{
@@ -33,29 +35,41 @@ namespace pGBA
 		public ushort ReadShort(uint adr)
 		{
 			//Needs to be implemented
-			//MessageBox.Show("ReadShort(0x"+Convert.ToString(adr,16)+");");
+			if((adr >= 0x08000000) && (adr <(0x08000000+romSize)-1))
+			{
+				adr -= 0x08000000;
+				return (ushort)(rom[adr]|rom[adr+1]<<8);
+			}
+			
 			return (ushort)0;
 		}
 		
-		uint ReadWord(uint adr)
+		public uint ReadWord(uint adr)
 		{
 			//Needs to be implemented
 			return (uint)0;
 		}
 		
-		void WriteByte(uint adr, byte value)
+		public void WriteByte(uint adr, byte value)
 		{
 			//Needs to be implemented
 		}
 		
-		void WriteShort(uint adr, ushort value)
+		public void WriteShort(uint adr, ushort value)
 		{
 			//Needs to be implemented
 		}
 		
-		void WriteWord(uint adr, uint value)
+		public void WriteWord(uint adr, uint value)
 		{
 			//Needs to be implemented
+		}
+		
+		public void LoadRom(byte[] _rom)
+		{
+			//rom = new byte[file_size];
+			rom = _rom;
+			romLoaded =true;
 		}
 	}
 }

@@ -76,7 +76,6 @@ namespace pGBA
         #region Opcodes
 		void thumb_lsl_imm()
 		{
-			// 0x00 - 0x07
             // lsl rd, rm, #immed
 			int rd = opcode & 0x7;
             int rm = (opcode >> 3) & 0x7;
@@ -91,13 +90,37 @@ namespace pGBA
                 myEngine.myCPU.Registers[rd] = myEngine.myCPU.Registers[rm] << immed;
             }
 
-            negative = myEngine.myCPU.Registers[rd] >> Armcpu.N_BIT;
+            negative = myEngine.myCPU.Registers[rd] >> 31;
+            zero = myEngine.myCPU.Registers[rd] == 0 ? 1U : 0U;
+
+			cycles = 1;
+		}
+		
+		void thumb_lsr_imm()
+		{
+            // lsr rd, rm, #immed
+			int rd = opcode & 0x7;
+            int rm = (opcode >> 3) & 0x7;
+            int immed = (opcode >> 6) & 0x1F;
+
+            if (immed == 0)
+            {
+                carry = myEngine.myCPU.Registers[rm] >> 31;
+                myEngine.myCPU.Registers[rd] = 0;
+            } else
+            {
+                carry = (myEngine.myCPU.Registers[rm] >> (immed - 1)) & 0x1;
+                myEngine.myCPU.Registers[rd] = myEngine.myCPU.Registers[rm] >> immed;
+            }
+
+            negative = myEngine.myCPU.Registers[rd] >> 31;
             zero = myEngine.myCPU.Registers[rd] == 0 ? 1U : 0U;
 
 			cycles = 1;
 		}
 		#endregion
 		
+		#region Flag Handling
 		private void PackFlags()
         {
 			myEngine.myCPU.Registers[16] &= 0x0FFFFFFF;
@@ -114,15 +137,15 @@ namespace pGBA
             carry = (myEngine.myCPU.Registers[16] >> Armcpu.C_BIT) & 1;
             overflow = (myEngine.myCPU.Registers[16] >> Armcpu.V_BIT) & 1;
         }
+        #endregion
 		
 		public uint Emulate()
 		{
 			byte	opcode_11_5, opcode_6_5, opcode_9_3;
 			uint 	address=myEngine.myCPU.Registers[15];
 			
-			cycles		= 1; //Only here incase i forget to set the cycles for an opcode and it creates an infinite loop
-			opcode		= 0x0088; //myEngine.myMemory.ReadShort(address);
-			opcode_11_5	= (byte)((opcode >> 11) & 0x11);	/*11-15 5bit*/
+			opcode		= myEngine.myMemory.ReadShort(address);
+			opcode_11_5	= (byte)((opcode >> 11) & 0x1F);	/*11-15 5bit*/
 			opcode_6_5	= (byte)((opcode >> 6) & 0x1F);
 			opcode_9_3	= (byte)((opcode >> 9) & 0x07);
 			
@@ -130,56 +153,56 @@ namespace pGBA
 			
 			switch(opcode_11_5){
 			case 0x00:	/*00000*/
-				thumb_lsl_imm();/*LSL Rd,Rs,#Offset5 - 1*/
+				thumb_lsl_imm();
 				break;
 			case 0x01:	/*00001*/
-				//thumb_lsr_imm();/*LSR Rd,Rs,#Offset5 - 1*/
+				thumb_lsr_imm();
 				break;
 			case 0x02:	/*00010*/
-				//thumb_asr_imm();/*ASR Rd,Rs,#Offset5 - 1*/
+				//thumb_asr_imm();
 				break;
 			case 0x03:	/*00011*/
 				//if((bool)((opcode >> 9)&0x01)){
-				//	arm7tdmi_thumb_sub();/*Œ¸ŽZ - 2*/
+				//	arm7tdmi_thumb_sub();
 				//}else{
-				//	arm7tdmi_thumb_add();/*‰ÁŽZ - 2*/
+				//	arm7tdmi_thumb_add();
 				//}
 				break;
 			case 0x04:	/*00100*/
-				//arm7tdmi_thumb_mov();/*MOV Rd,#Offset8 ˆÚ“® - 3*/
+				//arm7tdmi_thumb_mov();
 				break;
 			case 0x05:	/*00101*/
-				//arm7tdmi_thumb_cmp();/*CMP Rd,#Offset8 ”äŠr - 3*/
+				//arm7tdmi_thumb_cmp();
 				break;
 			case 0x06:	/*00110*/
-				//arm7tdmi_thumb_add_imm();/*ADD Rd,#Offset8 ‰ÁŽZ - 3*/
+				//arm7tdmi_thumb_add_imm();
 				break;
 			case 0x07:	/*00111*/
-				//arm7tdmi_thumb_sub_imm();/*SUB Rd,#Offset8 Œ¸ŽZ - 3*/
+				//arm7tdmi_thumb_sub_imm();
 				break;
 			case 0x08:	/*01000*/
 				switch(opcode_6_5){
-				case 0x00:	/*HiƒŒƒWƒXƒ^‘€ì/•ªŠòƒXƒe[ƒg*/
+				case 0x00:	
 				case 0x01:
 				case 0x02:
-					//arm7tdmi_thumb_add_hi();	/*HiƒŒƒWƒXƒ^‘€ì - 5*/
+					//arm7tdmi_thumb_add_hi();
 					break;
 				case 0x03:
 				case 0x04:
 				case 0x05:
-					//arm7tdmi_thumb_cmp_hi();	/*HiƒŒƒWƒXƒ^‘€ì - 5*/
+					//arm7tdmi_thumb_cmp_hi();
 					break;
 				case 0x06:
 				case 0x07:
 				case 0x08:
-					//arm7tdmi_thumb_mov_hi();	/*HiƒŒƒWƒXƒ^‘€ì - 5*/
+					//arm7tdmi_thumb_mov_hi();
 					break;
 				case 0x09:
 				case 0x0a:
 				case 0x0b:
-					//arm7tdmi_thumb_bx_hi();	/*•ªŠò‚ÆƒXƒe[ƒg•ÏX - 5*/
+					//arm7tdmi_thumb_bx_hi();
 					break;
-				case 0x10:	/*ALU‰‰ŽZ - 4*/
+				case 0x10:	/*ALU - 4*/
 					//arm7tdmi_thumb_and();
 					break;
 				case 0x11:
@@ -230,12 +253,11 @@ namespace pGBA
 				}
 				break;
 			case 0x09:	/*01001*/
-				//arm7tdmi_thumb_ldr_pc();	/*PC‘Š‘Îƒ[ƒh - 6*/
+				//arm7tdmi_thumb_ldr_pc();
 				break;
 			case 0x0A:	/*01010*/
 			case 0x0B:	/*01011*/
 				switch(opcode_9_3){
-				/*ƒŒƒWƒXƒ^ƒIƒtƒZƒbƒg‚É‚æ‚éƒ[ƒh/ƒXƒgƒA - 7*/
 				case 0x0:	/*000 LB0*/
 					//arm7tdmi_thumb_str();
 					break;
@@ -248,7 +270,6 @@ namespace pGBA
 				case 0x6:	/*110 LB0*/
 					//arm7tdmi_thumb_ldrb();
 					break;
-				/*ƒoƒCƒg^ƒn[ƒtƒ[ƒh‚Ìƒ[ƒh^ƒXƒgƒA‚Æ•„†Šg’£ - 8*/
 				case 0x1:	/*000 HS0*/
 					//arm7tdmi_thumb_strh();
 					break;
@@ -263,7 +284,6 @@ namespace pGBA
 					break;
 				}
 				break;	
-			/*ƒCƒ~ƒfƒBƒGƒCƒgƒIƒtƒZƒbƒg‚É‚æ‚éƒ[ƒh^ƒXƒgƒA - 9*/
 			case 0x0C:	/*01100 - BL=00*/
 				//arm7tdmi_thumb_str_imm();	/*str rd,[rb,#imm]*/
 				break;
@@ -276,21 +296,18 @@ namespace pGBA
 			case 0x0F:	/*01111 - BL=11*/
 				//arm7tdmi_thumb_ldrb_imm();/*ldrb rd,[rb,#imm]*/
 				break;
-			/*ƒn[ƒtƒ[ƒh‚Ìƒ[ƒh^ƒXƒgƒA - 10*/
 			case 0x10:	/*10000 - L=0*/
 				//arm7tdmi_thumb_strh_imm();/*strh rd,[rb,#imm]*/
 				break;
 			case 0x11:	/*10001 - L=1*/
 				//arm7tdmi_thumb_ldrh_imm();/*ldrh rd,[rb,#imm]*/
 				break;
-			/*SP‘Š‘Îƒ[ƒh^ƒXƒgƒA - 11*/
 			case 0x12:	/*10010 - S=0*/
 				//arm7tdmi_thumb_str_sp();/*str rd,[SP,#imm]*/
 				break;
 			case 0x13:	/*10011 - S=1*/
 				//arm7tdmi_thumb_ldr_sp();/*ldr rd,[SP,#imm]*/
 				break;
-			/*ƒAƒhƒŒƒX‚Ìƒ[ƒh - 12*/
 			case 0x14:	/*10100 - S=0*//*add rd,PC,#imm*/
 			case 0x15:	/*10101 - S=1*//*add rd,SP,#imm*/
 				//arm7tdmi_thumb_add_adr();
@@ -298,21 +315,19 @@ namespace pGBA
 			case 0x16:	/*10110*/
 			case 0x17:	/*10111*/
 				//if(BIT_N(opcode,10)){
-			/*ƒŒƒWƒXƒ^‚ÌPUSH/POP - 14*/
+			/*PUSH/POP - 14*/
 				//	if(BIT_N(opcode,11)){	/*L*/
 				//		arm7tdmi_thumb_pop();/*POP {Rlist}*/
 				//	}else{
 				//		arm7tdmi_thumb_push();/*PUSH {Rlist}*/
 				//	}
 				//}else{
-			/*ƒXƒ^ƒbƒNƒ|ƒCƒ“ƒ^‚ÉƒIƒtƒZƒbƒg‚ð‰ÁŽZ - 13*/
 				//	if(!((opcode >> 8) & 0x7)){	/*000S*/
 				//		arm7tdmi_thumb_add_sp();/*add SP,#+-imm*/
 				//	}
 				//	break;
 				//}
 				break;
-			/*•¡”ƒŒƒWƒXƒ^‚Ìƒ[ƒh^ƒXƒgƒA - 15*/
 			case 0x18:	/*11000*/
 				//arm7tdmi_thumb_stmia();/*stmia rb!,{Rlist}*/
 				break;
@@ -322,23 +337,20 @@ namespace pGBA
 			case 0x1A:	/*11010*/
 			case 0x1B:	/*11011*/
 				//if(((opcode >> 8) & 0xF) == 0xF){
-			/*ƒ\ƒtƒgƒEƒFƒAŠ„‚èž‚Ý - 17*/
 				//	arm7tdmi_thumb_swi();
 				//}else{
-			/*ðŒ•ªŠò - 16*/
 				//	arm7tdmi_thumb_bxx();
 				//}
 				break;
-			/*–³ðŒ•ªŠò - 18*/
 			case 0x1C:	/*11100*/
 				//arm7tdmi_thumb_b();
 				break;
-			/*’·‹——£•ªŠò‚ÆƒŠƒ“ƒN - 19*/
 			case 0x1E:	/*11110*/
 			case 0x1F:	/*11111*/
 				//arm7tdmi_thumb_bl();
 				break;
 			default:
+				cycles = 1;
 				break;
 			}
 			

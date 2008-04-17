@@ -21,6 +21,8 @@ namespace pGBA
 		private Engine myEngine;
 		private Disassembler disasm;
 		
+		private uint curPC=0;
+		
 		public DisassemblerForm(Engine engine)
 		{
 			//
@@ -36,17 +38,25 @@ namespace pGBA
 			
 			disasm = new Disassembler(engine);
 			
+			curPC = myEngine.myCPU.Registers[15];
+			
 			RefreshRegisterList();
-			RefreshDisasmList();
+			
+			if(myEngine.myMemory.romLoaded)
+			{
+				RefreshDisasmList();
+			}
 		}
 		
 		void RefreshDisasmList()
 		{
 			int i=0;
+			uint tAdr=0;
 			
 			for(i=0; i<17; i++)
 			{
-				disasmList.Items[i] = disasm.DisasmThumb(0);
+				tAdr = (uint)(curPC+(i*2));
+				disasmList.Items[i] = disasm.DisasmThumb(tAdr);
 			}
 		}
 		
@@ -65,13 +75,41 @@ namespace pGBA
 		{			
 			if(!autoUpdate.Checked) return;
 			
+			curPC = myEngine.myCPU.Registers[15];
 			
 			RefreshRegisterList();
+			RefreshDisasmList();
 		}
 		
 		void VScrollBar1Scroll(object sender, ScrollEventArgs e)
 		{
-			vScrollBar1.Value = 158;
+			switch (e.Type)
+            {
+                case ScrollEventType.SmallIncrement:
+					///if(thumb)
+                    	curPC += 2;
+					//else
+					//	curPC += 4;
+                    break;
+                case ScrollEventType.SmallDecrement:
+                    ///if(thumb)
+                    	curPC -= 2;
+					//else
+					//	curPC -= 4;
+                    break;
+                case ScrollEventType.LargeIncrement:
+                    curPC += 0x100;
+                    break;
+                case ScrollEventType.LargeDecrement:
+                    curPC -= 0x100;
+                    break;
+                case ScrollEventType.ThumbTrack:
+                    curPC = (uint)e.NewValue;
+                    break;
+            }
+			
+			RefreshRegisterList();
+			RefreshDisasmList();
 		}
 		
 		void CloseBtnClick(object sender, EventArgs e)
@@ -81,7 +119,19 @@ namespace pGBA
 		
 		void refreshBtnClick(object sender, EventArgs e)
 		{
+			curPC = myEngine.myCPU.Registers[15];
+			
 			RefreshRegisterList();
+			RefreshDisasmList();
+		}
+		
+		void NextBtnClick(object sender, EventArgs e)
+		{			
+			myEngine.myCPU.Step();
+			
+			curPC = myEngine.myCPU.Registers[15];	
+			RefreshRegisterList();
+			RefreshDisasmList();
 		}
 	}
 }
