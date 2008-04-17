@@ -69,8 +69,16 @@ namespace pGBA
 				//if(Registers[16] & 0x20) //Thumb State
 					cycles -= myThumb.Emulate();
 				//else
-				//cycles -= myArm.Emulator();
+					//cycles -= myArm.Emulator();
 			}
+		}
+		
+		public void Step()
+		{
+			//if(Registers[16] & 0x20) //Thumb State
+				myThumb.Emulate();
+			//else
+				//myArm.Emulator();
 		}
 	}
 }

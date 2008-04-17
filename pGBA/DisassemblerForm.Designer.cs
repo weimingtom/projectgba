@@ -62,26 +62,26 @@ namespace pGBA
 			this.disasmList.Font = new System.Drawing.Font("Microsoft Sans Serif", 8.25F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
 			this.disasmList.FormattingEnabled = true;
 			this.disasmList.Items.AddRange(new object[] {
-									"1",
-									"2",
-									"3",
-									"4",
-									"5",
-									"6",
-									"7",
-									"8",
-									"9",
-									"10",
-									"11",
-									"12",
-									"13",
-									"14",
-									"15",
-									"16",
-									"17",
-									"18",
-									"19",
-									"20"});
+									" ",
+									" ",
+									" ",
+									" ",
+									" ",
+									" ",
+									" ",
+									" ",
+									" ",
+									" ",
+									" ",
+									" ",
+									" ",
+									" ",
+									" ",
+									" ",
+									" ",
+									" ",
+									" ",
+									" "});
 			this.disasmList.Location = new System.Drawing.Point(12, 34);
 			this.disasmList.Name = "disasmList";
 			this.disasmList.Size = new System.Drawing.Size(388, 264);
@@ -91,23 +91,23 @@ namespace pGBA
 			// 
 			this.regList.FormattingEnabled = true;
 			this.regList.Items.AddRange(new object[] {
-									"0",
-									"1",
-									"2",
-									"3",
-									"4",
-									"5",
-									"6",
-									"7",
-									"8",
-									"9",
-									"10",
-									"11",
-									"12",
-									"13",
-									"14",
-									"15",
-									"16"});
+									" ",
+									" ",
+									" ",
+									" ",
+									" ",
+									" ",
+									" ",
+									" ",
+									" ",
+									" ",
+									" ",
+									" ",
+									" ",
+									" ",
+									" ",
+									" ",
+									" "});
 			this.regList.Location = new System.Drawing.Point(445, 21);
 			this.regList.Name = "regList";
 			this.regList.Size = new System.Drawing.Size(136, 225);
@@ -174,6 +174,7 @@ namespace pGBA
 			this.nextBtn.TabIndex = 7;
 			this.nextBtn.Text = "Next";
 			this.nextBtn.UseVisualStyleBackColor = true;
+			this.nextBtn.Click += new System.EventHandler(this.NextBtnClick);
 			// 
 			// Nflag
 			// 
