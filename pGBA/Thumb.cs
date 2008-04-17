@@ -107,10 +107,31 @@ namespace pGBA
             {
                 carry = myEngine.myCPU.Registers[rm] >> 31;
                 myEngine.myCPU.Registers[rd] = 0;
-            } else
-            {
+            } else {
                 carry = (myEngine.myCPU.Registers[rm] >> (immed - 1)) & 0x1;
                 myEngine.myCPU.Registers[rd] = myEngine.myCPU.Registers[rm] >> immed;
+            }
+
+            negative = myEngine.myCPU.Registers[rd] >> 31;
+            zero = myEngine.myCPU.Registers[rd] == 0 ? 1U : 0U;
+
+			cycles = 1;
+		}
+		
+		void thumb_asr_imm()
+		{
+            // asr rd, rm, #immed
+			int rd = opcode & 0x7;
+            int rm = (opcode >> 3) & 0x7;
+            int immed = (opcode >> 6) & 0x1F;
+
+            if (immed == 0)
+            {
+                carry = myEngine.myCPU.Registers[rm] >> 31;
+                myEngine.myCPU.Registers[rd] = 0;
+            } else {
+                carry = (myEngine.myCPU.Registers[rm] >> (immed - 1)) & 0x1;
+                myEngine.myCPU.Registers[rd] = (uint)(((int)myEngine.myCPU.Registers[rm]) >> immed);
             }
 
             negative = myEngine.myCPU.Registers[rd] >> 31;

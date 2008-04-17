@@ -285,6 +285,8 @@ namespace pGBA
 			this.Controls.Add(this.vScrollBar1);
 			this.Controls.Add(this.regList);
 			this.Controls.Add(this.disasmList);
+			this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedSingle;
+			this.MaximizeBox = false;
 			this.Name = "DisassemblerForm";
 			this.Text = "Disassembler";
 			this.ResumeLayout(false);
