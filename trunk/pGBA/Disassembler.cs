@@ -79,13 +79,13 @@ namespace pGBA
 			
 			switch(opcode_11_5){
 			case 0x00:	/*00000*/
-				str += thumb_lsl_imm();
+				str += String.Format("lsl r{0:d}, r{1:d}, #0x{2:x2}", (opcode & 0x7), ((opcode >> 3) & 0x7), ((opcode >> 6) & 0x1F));
 				break;
 			case 0x01:	/*00001*/
-				str += thumb_lsr_imm();
+				str += String.Format("lsr r{0:d}, r{1:d}, #0x{2:x2}", (opcode & 0x7), ((opcode >> 3) & 0x7), ((opcode >> 6) & 0x1F));
 				break;
 			case 0x02:	/*00010*/
-				str += thumb_asr_imm();
+				str += String.Format("asr r{0:d}, r{1:d}, #0x{2:x2}", (opcode & 0x7), ((opcode >> 3) & 0x7), ((opcode >> 6) & 0x1F));
 				break;
 			default: 
 				str +=  "Unknown";

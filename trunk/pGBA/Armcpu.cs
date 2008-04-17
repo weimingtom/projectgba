@@ -34,6 +34,7 @@ namespace pGBA
         public const int F_BIT = 6;
         public const int T_BIT = 5;
 
+        //CPSR bit masks
         public const uint N_MASK = (uint)(1U << N_BIT);
         public const uint Z_MASK = (uint)(1U << Z_BIT);
         public const uint C_MASK = (uint)(1U << C_BIT);
@@ -54,6 +55,14 @@ namespace pGBA
 			myThumb = new Thumb(myEngine);
 			
 			Registers = new uint[17];
+			
+			Reset();
+		}
+		
+		public void Reset()
+		{
+			Registers[1] = 0x00000001;
+			Registers[2] = 0x00000100;
 			
 			//Init Default Registers
 			Registers[13] = 0x03007F00;

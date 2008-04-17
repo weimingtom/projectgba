@@ -70,6 +70,7 @@ namespace pGBA
 
                     myEngine.myMemory.LoadRom(rom);
                 }
+				myEngine.myCPU.Reset();
 			}
 		}
 		

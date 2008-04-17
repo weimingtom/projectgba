@@ -68,7 +68,16 @@ namespace pGBA
 			{
 				regList.Items[i] = "R"+i.ToString()+" = 0x"+Convert.ToString(myEngine.myCPU.Registers[i],16).ToUpper().PadLeft(8,'0');
 			}
+			
+			Nflag.Checked = (myEngine.myCPU.Registers[16] & Armcpu.N_MASK) == 0 ? false:true;
+			Zflag.Checked = (myEngine.myCPU.Registers[16] & Armcpu.Z_MASK) == 0 ? false:true;
+			Cflag.Checked = (myEngine.myCPU.Registers[16] & Armcpu.C_MASK) == 0 ? false:true;
+			Vflag.Checked = (myEngine.myCPU.Registers[16] & Armcpu.V_MASK) == 0 ? false:true;
+			Iflag.Checked = (myEngine.myCPU.Registers[16] & Armcpu.I_MASK) == 0 ? false:true;
+			Fflag.Checked = (myEngine.myCPU.Registers[16] & Armcpu.F_MASK) == 0 ? false:true;
+			Tflag.Checked = (myEngine.myCPU.Registers[16] & Armcpu.T_MASK) == 0 ? false:true;
 		
+			ModeValue.Text =  Convert.ToString((myEngine.myCPU.Registers[16] & 0xFF),16).ToUpper();
 		}
 		
 		void TimerTick(object sender, EventArgs e)
