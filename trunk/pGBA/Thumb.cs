@@ -180,7 +180,7 @@ namespace pGBA
 				thumb_lsr_imm();
 				break;
 			case 0x02:	/*00010*/
-				//thumb_asr_imm();
+				thumb_asr_imm();
 				break;
 			case 0x03:	/*00011*/
 				//if((bool)((opcode >> 9)&0x01)){

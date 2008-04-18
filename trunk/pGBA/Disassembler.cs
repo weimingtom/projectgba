@@ -28,41 +28,6 @@ namespace pGBA
 		
 		#region Thumb
 		
-		#region Opcodes
-		string thumb_lsl_imm()
-		{
-			// 0x00 - 0x07
-            // lsl rd, rm, #immed
-			int rd = this.opcode & 0x7;
-            int rm = (this.opcode >> 3) & 0x7;
-            int immed = (this.opcode >> 6) & 0x1F;
-
-            return String.Format("lsl r{0:d}, r{1:d}, #0x{2:x2}", rd, rm, immed);
-		}
-		
-		string  thumb_lsr_imm()
-		{
-			// 0x00 - 0x07
-            // lsr rd, rm, #immed
-			int rd = this.opcode & 0x7;
-            int rm = (this.opcode >> 3) & 0x7;
-            int immed = (this.opcode >> 6) & 0x1F;
-
-            return String.Format("lsr r{0:d}, r{1:d}, #0x{2:x2}", rd, rm, immed);
-		}
-		
-		string  thumb_asr_imm()
-		{
-			// 0x00 - 0x07
-            // lsr rd, rm, #immed
-			int rd = this.opcode & 0x7;
-            int rm = (this.opcode >> 3) & 0x7;
-            int immed = (this.opcode >> 6) & 0x1F;
-
-            return String.Format("asr r{0:d}, r{1:d}, #0x{2:x2}", rd, rm, immed);
-		}
-		#endregion
-		
 		public string DisasmThumb(uint adr)
 		{
 			string str;
@@ -87,6 +52,36 @@ namespace pGBA
 			case 0x02:	/*00010*/
 				str += String.Format("asr r{0:d}, r{1:d}, #0x{2:x2}", (opcode & 0x7), ((opcode >> 3) & 0x7), ((opcode >> 6) & 0x1F));
 				break;
+			case 0x03:	/*00011*/
+				switch((opcode >> 9)&3)
+				{
+					case 0: 
+						str += String.Format("add r{0:d}, r{1:d}, r{2:d}", (opcode & 0x7), ((opcode >> 3) & 0x7), ((opcode >> 6) & 0x07));
+						break;
+					case 1:
+						str += String.Format("sub r{0:d}, r{1:d}, r{2:d}", (opcode & 0x7), ((opcode >> 3) & 0x7), ((opcode >> 6) & 0x07));
+						break;
+					case 2: 
+						str += String.Format("add r{0:d}, r{1:d}, #0x{2:x2}", (opcode & 0x7), ((opcode >> 3) & 0x7), ((opcode >> 6) & 0x07));
+						break;
+					case 3: 
+						str += String.Format("sub r{0:d}, r{1:d}, #0x{2:x2}", (opcode & 0x7), ((opcode >> 3) & 0x7), ((opcode >> 6) & 0x07));
+						break;
+				}
+				break;
+			case 0x04:	/*00100*/
+				str += String.Format("mov r{0:d}, #0x{1:x2}", ((opcode >> 8) & 0x07), (opcode & 0xFF));
+				break;
+			case 0x05:	/*00101*/
+				str += String.Format("cmp r{0:d}, #0x{1:x2}", ((opcode >> 8) & 0x07), (opcode & 0xFF));
+				break;
+			case 0x06:	/*00110*/
+				str += String.Format("add r{0:d}, #0x{1:x2}", ((opcode >> 8) & 0x07), (opcode & 0xFF));
+				break;
+			case 0x07:	/*00111*/
+				str += String.Format("sub r{0:d}, #0x{1:x2}", ((opcode >> 8) & 0x07), (opcode & 0xFF));
+				break;
+				
 			default: 
 				str +=  "Unknown";
 				break;

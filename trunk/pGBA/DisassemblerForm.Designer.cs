@@ -55,6 +55,7 @@ namespace pGBA
 			this.Iflag = new System.Windows.Forms.CheckBox();
 			this.ModeTxt = new System.Windows.Forms.Label();
 			this.ModeValue = new System.Windows.Forms.Label();
+			this.editRegister = new System.Windows.Forms.TextBox();
 			this.SuspendLayout();
 			// 
 			// disasmList
@@ -112,6 +113,8 @@ namespace pGBA
 			this.regList.Name = "regList";
 			this.regList.Size = new System.Drawing.Size(136, 225);
 			this.regList.TabIndex = 1;
+			this.regList.DoubleClick += new System.EventHandler(this.regListDoubleClick);
+			this.regList.Click += new System.EventHandler(this.regListClick);
 			// 
 			// vScrollBar1
 			// 
@@ -263,11 +266,23 @@ namespace pGBA
 			this.ModeValue.TabIndex = 16;
 			this.ModeValue.Text = "1F";
 			// 
+			// editRegister
+			// 
+			this.editRegister.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(192)))), ((int)(((byte)(255)))), ((int)(((byte)(192)))));
+			this.editRegister.Location = new System.Drawing.Point(492, -5);
+			this.editRegister.MaxLength = 8;
+			this.editRegister.Name = "editRegister";
+			this.editRegister.Size = new System.Drawing.Size(92, 20);
+			this.editRegister.TabIndex = 17;
+			this.editRegister.Visible = false;
+			this.editRegister.KeyPress += new System.Windows.Forms.KeyPressEventHandler(this.editRegister_KeyPress);
+			// 
 			// DisassemblerForm
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
 			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
 			this.ClientSize = new System.Drawing.Size(593, 350);
+			this.Controls.Add(this.editRegister);
 			this.Controls.Add(this.ModeValue);
 			this.Controls.Add(this.ModeTxt);
 			this.Controls.Add(this.Tflag);
@@ -290,7 +305,9 @@ namespace pGBA
 			this.Name = "DisassemblerForm";
 			this.Text = "Disassembler";
 			this.ResumeLayout(false);
+			this.PerformLayout();
 		}
+		private System.Windows.Forms.TextBox editRegister;
 		private System.Windows.Forms.CheckBox Nflag;
 		private System.Windows.Forms.CheckBox Zflag;
 		private System.Windows.Forms.CheckBox Cflag;
