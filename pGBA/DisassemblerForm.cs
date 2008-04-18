@@ -41,11 +41,7 @@ namespace pGBA
 			curPC = myEngine.myCPU.Registers[15];
 			
 			RefreshRegisterList();
-			
-			if(myEngine.myMemory.romLoaded)
-			{
-				RefreshDisasmList();
-			}
+			RefreshDisasmList();
 		}
 		
 		void RefreshDisasmList()
@@ -63,10 +59,12 @@ namespace pGBA
 		void RefreshRegisterList()
 		{
 			int i=0;
+			string temp;
 			
 			for(i=0; i<17; i++)
 			{
-				regList.Items[i] = "R"+i.ToString()+" = 0x"+Convert.ToString(myEngine.myCPU.Registers[i],16).ToUpper().PadLeft(8,'0');
+				temp=i.ToString();
+				regList.Items[i] = "R"+temp.PadRight(5-temp.Length,' ')+"= 0x"+Convert.ToString(myEngine.myCPU.Registers[i],16).ToUpper().PadLeft(8,'0');
 			}
 			
 			Nflag.Checked = (myEngine.myCPU.Registers[16] & Armcpu.N_MASK) == 0 ? false:true;
@@ -141,6 +139,39 @@ namespace pGBA
 			curPC = myEngine.myCPU.Registers[15];	
 			RefreshRegisterList();
 			RefreshDisasmList();
+		}
+		
+		void regListDoubleClick(object sender, EventArgs e)
+		{
+			int itemSelected=regList.SelectedIndex;
+			string itemText=Convert.ToString(myEngine.myCPU.Registers[itemSelected],16).PadLeft(8,'0');
+															 
+			Rectangle r=regList.GetItemRectangle(itemSelected);
+			
+			editRegister.Location=new System.Drawing.Point(editRegister.Location.X,regList.Location.Y+r.Y);
+			editRegister.Size=new System.Drawing.Size(editRegister.Size.Width, r.Height-10);
+			editRegister.Visible=true;
+			editRegister.Text=itemText;
+			editRegister.Focus();
+			editRegister.SelectAll();
+			
+		}
+		
+		void regListClick(object sender, EventArgs e)
+		{
+			editRegister.Visible=false;	
+		}
+		
+		private void editRegister_KeyPress(object sender, System.Windows.Forms.KeyPressEventArgs e)
+		{
+			if (e.KeyChar==13)
+			{
+				myEngine.myCPU.Registers[regList.SelectedIndex] = Convert.ToUInt32(editRegister.Text,16);
+				RefreshRegisterList();
+				editRegister.Visible=false;
+			}
+			if (e.KeyChar==27)
+				editRegister.Visible=false;
 		}
 	}
 }

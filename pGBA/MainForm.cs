@@ -57,12 +57,8 @@ namespace pGBA
             {
 				using (Stream stream = openFileDialog.OpenFile())
                 {
-                    uint romSize = 1;
-                    while (romSize < stream.Length)
-                    {
-                        romSize <<= 1;
-                    }
-
+					uint romSize = (uint)stream.Length;
+                    
                     byte[] rom = new byte[romSize];
                     stream.Read(rom, 0, (int)stream.Length);
                     

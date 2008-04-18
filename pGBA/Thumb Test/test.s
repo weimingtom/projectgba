@@ -15,5 +15,11 @@ add r1,r0,#6
 sub r3,r2,r1
 sub r3,r2,#2
 
+@Section 3
+mov r0, #3
+cmp r0, #2
+add r1, #1
+sub r0, #1
+
 
 .end
