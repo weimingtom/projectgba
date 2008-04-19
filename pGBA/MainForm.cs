@@ -83,5 +83,10 @@ namespace pGBA
 			
 			form.Show();
 		}
+		
+		void AboutToolStripMenuItemClick(object sender, EventArgs e)
+		{
+			MessageBox.Show("pGBA v0.1 alpha \n(C) Normmatt 2008","About");
+		}
 	}
 }

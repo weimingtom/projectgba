@@ -53,6 +53,7 @@ namespace pGBA
 		private Engine myEngine;
 		private ushort	opcode, cycles;
 		private uint zero, carry, negative, overflow;
+		private uint[] registers;
 		
 		public Thumb(Engine engine)
 		{
@@ -74,24 +75,26 @@ namespace pGBA
         #endregion
 		
         #region Opcodes
+        
+        //Section 1 Starts here
 		void thumb_lsl_imm()
 		{
             // lsl rd, rm, #immed
-			int rd = opcode & 0x7;
-            int rm = (opcode >> 3) & 0x7;
+			int rd = opcode & 0x07;
+            int rs = (opcode >> 3) & 0x07;
             int immed = (opcode >> 6) & 0x1F;
 
             if (immed == 0)
             {
-                myEngine.myCPU.Registers[rd] = myEngine.myCPU.Registers[rm];
+                registers[rd] = registers[rs];
             } else
             {
-                carry = (myEngine.myCPU.Registers[rm] >> (32 - immed)) & 0x1;
-                myEngine.myCPU.Registers[rd] = myEngine.myCPU.Registers[rm] << immed;
+                carry = (registers[rs] >> (32 - immed)) & 0x01;
+                registers[rd] = registers[rs] << immed;
             }
 
-            negative = myEngine.myCPU.Registers[rd] >> 31;
-            zero = myEngine.myCPU.Registers[rd] == 0 ? 1U : 0U;
+            negative = registers[rd] >> 31;
+            zero = (registers[rd] == 0) ? 1U : 0U;
 
 			cycles = 1;
 		}
@@ -99,46 +102,293 @@ namespace pGBA
 		void thumb_lsr_imm()
 		{
             // lsr rd, rm, #immed
-			int rd = opcode & 0x7;
-            int rm = (opcode >> 3) & 0x7;
+			int rd = opcode & 0x07;
+            int rs = (opcode >> 3) & 0x07;
             int immed = (opcode >> 6) & 0x1F;
 
             if (immed == 0)
             {
-                carry = myEngine.myCPU.Registers[rm] >> 31;
+                carry = registers[rs] >> 31;
                 myEngine.myCPU.Registers[rd] = 0;
             } else {
-                carry = (myEngine.myCPU.Registers[rm] >> (immed - 1)) & 0x1;
-                myEngine.myCPU.Registers[rd] = myEngine.myCPU.Registers[rm] >> immed;
+                carry = (registers[rs] >> (immed - 1)) & 0x01;
+                registers[rd] = registers[rs] >> immed;
             }
 
-            negative = myEngine.myCPU.Registers[rd] >> 31;
-            zero = myEngine.myCPU.Registers[rd] == 0 ? 1U : 0U;
+            negative = registers[rd] >> 31;
+            zero = (registers[rd] == 0) ? 1U : 0U;
 
 			cycles = 1;
 		}
 		
 		void thumb_asr_imm()
 		{
-            // asr rd, rm, #immed
-			int rd = opcode & 0x7;
-            int rm = (opcode >> 3) & 0x7;
+            // asr rd, rs, #immed
+			int rd = opcode & 0x07;
+            int rs = (opcode >> 3) & 0x07;
             int immed = (opcode >> 6) & 0x1F;
 
             if (immed == 0)
             {
-                carry = myEngine.myCPU.Registers[rm] >> 31;
-                myEngine.myCPU.Registers[rd] = 0;
+                carry = registers[rs] >> 31;
+                registers[rd] = 0;
             } else {
-                carry = (myEngine.myCPU.Registers[rm] >> (immed - 1)) & 0x1;
-                myEngine.myCPU.Registers[rd] = (uint)(((int)myEngine.myCPU.Registers[rm]) >> immed);
+                carry = (registers[rs] >> (immed - 1)) & 0x01;
+                registers[rd] = (uint)(((int)registers[rs]) >> immed);
             }
 
-            negative = myEngine.myCPU.Registers[rd] >> 31;
-            zero = myEngine.myCPU.Registers[rd] == 0 ? 1U : 0U;
+            negative = registers[rd] >> 31;
+            zero = (registers[rd] == 0) ? 1U : 0U;
 
 			cycles = 1;
 		}
+		
+		//Section 2 Starts here
+		void thumb_add_reg()
+		{
+			// add rd, rs, rn
+			int rd = opcode & 0x07;
+            int rs = (opcode >> 3) & 0x07;
+            int rn = (opcode >> 6) & 0x07;
+            
+            //Has to be unchecked or causes error
+            registers[rd] = unchecked(registers[rs] + registers[rn]);
+            
+            OverflowCarryAdd(registers[rs],registers[rn],registers[rd]);
+            
+            negative = registers[rd] >> 31;
+            zero = (registers[rd] == 0) ? 1U : 0U;
+            
+            cycles = 1;
+		}
+		
+		void thumb_sub_reg()
+		{
+			// sub rd, rs, rn
+			int rd = opcode & 0x07;
+            int rs = (opcode >> 3) & 0x07;
+            int rn = (opcode >> 6) & 0x07;
+            
+            //Has to be unchecked or causes error
+            registers[rd] = unchecked(registers[rs] - registers[rn]);
+            
+            OverflowCarrySub(registers[rs],registers[rn],registers[rd]);
+            
+            negative = registers[rd] >> 31;
+            zero = (registers[rd] == 0) ? 1U : 0U;
+            
+            cycles = 1;
+		}
+		
+		void thumb_add_imm()
+		{
+			// add rd, rs, #immed
+			int rd = opcode & 0x07;
+            int rs = (opcode >> 3) & 0x07;
+            uint immed = (uint)((opcode >> 6) & 0x07);
+            
+            //Has to be unchecked or causes error
+            registers[rd] = unchecked(registers[rs] + immed);
+            
+            OverflowCarryAdd(registers[rs],immed,registers[rd]);
+            
+            negative = registers[rd] >> 31;
+            zero = (registers[rd] == 0) ? 1U : 0U;
+            
+            cycles = 1;
+		}
+		
+		void thumb_sub_imm()
+		{
+			// sub rd, rs, #immed
+			int rd = opcode & 0x07;
+            int rs = (opcode >> 3) & 0x07;
+            uint immed = (uint)((opcode >> 6) & 0x07);
+            
+            //Has to be unchecked or causes error
+            registers[rd] = unchecked(registers[rs] - immed);
+            
+            OverflowCarrySub(registers[rs],immed,registers[rd]);
+            
+            negative = registers[rd] >> 31;
+            zero = (registers[rd] == 0) ? 1U : 0U;
+            
+            cycles = 1;
+		}
+		
+		//Section 3 Starts here
+		void thumb_mov()
+		{
+			// mov rd, #immed
+			uint immed = (uint)(opcode & 0xFF);
+            int rd = (opcode >> 8) & 0x07;
+            
+            registers[rd] = immed;
+            
+            negative = 0;
+            zero = (registers[rd] == 0) ? 1U : 0U;
+            
+            cycles = 1;
+		}
+		
+		void thumb_cmp()
+		{
+			// cmp rd, #immed
+			uint immed = (uint)(opcode & 0xFF);
+            int rd = (opcode >> 8) & 0x07;
+            uint alu = registers[rd] - immed;
+
+            OverflowCarrySub(registers[rd], immed, alu);
+            
+            negative = alu >> 31;
+            zero = (alu == 0) ? 1U : 0U;
+            
+            cycles = 1;
+		}
+		
+		void thumb_add()
+		{
+			// add rd, #immed
+			uint immed = (uint)(opcode & 0xFF);
+            int rd = (opcode >> 8) & 0x07;
+            uint ord = registers[rd];
+
+            registers[rd] += immed;
+            
+            OverflowCarryAdd(ord, immed, registers[rd]);
+            
+            negative = registers[rd] >> 31;
+            zero = (registers[rd] == 0) ? 1U : 0U;
+            
+            cycles = 1;
+		}
+		
+		void thumb_sub()
+		{
+			// sub rd, #immed
+			uint immed = (uint)(opcode & 0xFF);
+            int rd = (opcode >> 8) & 0x07;
+            uint ord = registers[rd];
+
+            registers[rd] -= immed;
+            
+            OverflowCarrySub(ord, immed, registers[rd]);
+            
+            negative = registers[rd] >> 31;
+            zero = (registers[rd] == 0) ? 1U : 0U;
+            
+            cycles = 1;
+		}
+		
+		//Section 4 Starts here
+		void thumb_alu_and()
+		{
+			//and rd,rs
+			int rd = (opcode & 0x07);
+			int rs = ((opcode>>3) & 0x07);
+			
+			registers[rd] &= registers[rs];
+			
+			negative = registers[rd] >> 31;
+            zero = registers[rd] == 0 ? 1U : 0U;
+            
+            cycles = 1;
+		}
+		
+		void thumb_alu_eor()
+		{
+			//eor rd,rs
+			int rd = (opcode & 0x07);
+			int rs = ((opcode>>3) & 0x07);
+			
+			registers[rd] ^= registers[rs];
+			
+			negative = registers[rd] >> 31;
+            zero = registers[rd] == 0 ? 1U : 0U;
+            
+            cycles = 1;
+		}
+		
+		void thumb_alu_lsl()
+		{
+			//lsl rd,rs
+			int rd = (opcode & 0x07);
+			int rs = ((opcode>>3) & 0x07);
+			int shiftAmount = (registers[rs] & 0xFF);
+			
+			if (shiftAmt == 0)
+            {
+            	// Don't need to do anything
+            }
+            else if (shiftAmt < 32)
+            {
+            	carry = (registers[rd] >> (32 - shiftAmt)) & 0x1;
+            	registers[rd] <<= shiftAmt;
+            }
+            else if (shiftAmt == 32)
+            {
+            	carry = registers[rd] & 0x1;
+            	registers[rd] = 0;
+            }
+            else
+            {
+            	carry = 0;
+                registers[rd] = 0;
+            }
+			
+			negative = registers[rd] >> 31;
+            zero = registers[rd] == 0 ? 1U : 0U;
+            
+            cycles = 1;
+		}
+		
+		void thumb_alu_lsr()
+		{
+			//lsr rd,rs
+			int rd = (opcode & 0x07);
+			int rs = ((opcode>>3) & 0x07);
+			int shiftAmount = (registers[rs] & 0xFF);
+			
+			if (shiftAmt == 0)
+            {
+            	// Don't need to do anything
+            }
+            else if (shiftAmt < 32)
+            {
+            	carry = (registers[rd] >> (32 - shiftAmt)) & 0x1;
+            	registers[rd] >>= shiftAmt;
+            }
+            else if (shiftAmt == 32)
+            {
+            	carry = registers[rd] & 0x1;
+            	registers[rd] = 0;
+            }
+            else
+            {
+            	carry = 0;
+                registers[rd] = 0;
+            }
+			
+			negative = registers[rd] >> 31;
+            zero = registers[rd] == 0 ? 1U : 0U;
+            
+            cycles = 1;
+		}
+		//Section 5 Starts here
+		//Section 6 Starts here
+		//Section 7 Starts here
+		//Section 8 Starts here
+		//Section 9 Starts here
+		//Section 10 Starts here
+		//Section 11 Starts here
+		//Section 12 Starts here
+		//Section 13 Starts here
+		//Section 14 Starts here
+		//Section 15 Starts here
+		//Section 16 Starts here
+		//Section 17 Starts here
+		//Section 18 Starts here
+		//Section 19 Starts here
 		#endregion
 		
 		#region Flag Handling
@@ -172,6 +422,8 @@ namespace pGBA
 			
 			UnpackFlags();
 			
+			registers = myEngine.myCPU.Registers;
+			
 			switch(opcode_11_5){
 			case 0x00:	/*00000*/
 				thumb_lsl_imm();
@@ -183,184 +435,174 @@ namespace pGBA
 				thumb_asr_imm();
 				break;
 			case 0x03:	/*00011*/
-				//if((bool)((opcode >> 9)&0x01)){
-				//	arm7tdmi_thumb_sub();
-				//}else{
-				//	arm7tdmi_thumb_add();
-				//}
+				switch((opcode >> 9)&3)
+				{
+					case 0: 
+						thumb_add_reg();
+						break;
+					case 1:
+						thumb_sub_reg();
+						break;
+					case 2: 
+						thumb_add_imm();
+						break;
+					case 3: 
+						thumb_sub_imm();
+						break;
+				}
 				break;
 			case 0x04:	/*00100*/
-				//arm7tdmi_thumb_mov();
+				thumb_mov();
 				break;
 			case 0x05:	/*00101*/
-				//arm7tdmi_thumb_cmp();
+				thumb_cmp();
 				break;
 			case 0x06:	/*00110*/
-				//arm7tdmi_thumb_add_imm();
+				thumb_add();
 				break;
 			case 0x07:	/*00111*/
-				//arm7tdmi_thumb_sub_imm();
+				thumb_sub();
 				break;
 			case 0x08:	/*01000*/
-				switch(opcode_6_5){
-				case 0x00:	
+				switch((opcode >> 6)&0x0F){
+				case 0x00:
+					thumb_alu_and();
+					break;
 				case 0x01:
+					thumb_alu_eor();
+					break;
 				case 0x02:
-					//arm7tdmi_thumb_add_hi();
+					thumb_alu_lsl();
 					break;
 				case 0x03:
+					//thumb_alu_lsr();
+					break;
 				case 0x04:
+					//thumb_alu_asr();
+					break;
 				case 0x05:
-					//arm7tdmi_thumb_cmp_hi();
+					//thumb_alu_adc();
 					break;
 				case 0x06:
+					//thumb_alu_sbc();
+					break;
 				case 0x07:
+					//thumb_alu_ror();
+					break;
 				case 0x08:
-					//arm7tdmi_thumb_mov_hi();
+					//thumb_alu_tst();
 					break;
 				case 0x09:
-				case 0x0a:
-				case 0x0b:
-					//arm7tdmi_thumb_bx_hi();
+					//thumb_alu_neg();
 					break;
-				case 0x10:	/*ALU - 4*/
-					//arm7tdmi_thumb_and();
+				case 0x0A:
+					//thumb_alu_cmp();
 					break;
-				case 0x11:
-					//arm7tdmi_thumb_eor();
+				case 0x0B:
+					//thumb_alu_cmn();
 					break;
-				case 0x12:
-					//arm7tdmi_thumb_lsl();
+				case 0x0C:
+					//thumb_alu_orr();
 					break;
-				case 0x13:
-					//arm7tdmi_thumb_lsr();
+				case 0x0D:
+					//thumb_alu_mul();
 					break;
-				case 0x14:
-					//arm7tdmi_thumb_asr();
+				case 0x0E:
+					//thumb_alu_bic();
 					break;
-				case 0x15:
-					//arm7tdmi_thumb_adc();
-					break;
-				case 0x16:
-					//arm7tdmi_thumb_sbc();
-					break;
-				case 0x17:
-					//arm7tdmi_thumb_ror();
-					break;
-				case 0x18:
-					//arm7tdmi_thumb_tst();
-					break;
-				case 0x19:
-					//arm7tdmi_thumb_neg();
-					break;
-				case 0x1A:
-					//arm7tdmi_thumb_cmp();
-					break;
-				case 0x1B:
-					//arm7tdmi_thumb_cmn();
-					break;
-				case 0x1C:
-					//arm7tdmi_thumb_orr();
-					break;
-				case 0x1D:
-					//arm7tdmi_thumb_mul();
-					break;
-				case 0x1E:
-					//arm7tdmi_thumb_bic();
-					break;
-				case 0x1F:
-					//arm7tdmi_thumb_mvn();
+				case 0x0F:
+					//thumb_alu_mvn();
 					break;
 				}
 				break;
 			case 0x09:	/*01001*/
-				//arm7tdmi_thumb_ldr_pc();
+				//thumb_ldr_pc();
 				break;
 			case 0x0A:	/*01010*/
 			case 0x0B:	/*01011*/
 				switch(opcode_9_3){
 				case 0x0:	/*000 LB0*/
-					//arm7tdmi_thumb_str();
+					//thumb_str();
 					break;
 				case 0x2:	/*010 LB0*/
-					//arm7tdmi_thumb_strb();
+					//thumb_strb();
 					break;
 				case 0x4:	/*100 LB0*/
-					//arm7tdmi_thumb_ldr();
+					//thumb_ldr();
 					break;
 				case 0x6:	/*110 LB0*/
-					//arm7tdmi_thumb_ldrb();
+					//thumb_ldrb();
 					break;
 				case 0x1:	/*000 HS0*/
-					//arm7tdmi_thumb_strh();
+					//thumb_strh();
 					break;
 				case 0x3:	/*010 HS0*/
-					//arm7tdmi_thumb_ldsb();
+					//thumb_ldsb();
 					break;
 				case 0x5:	/*100 HS0*/
-					//arm7tdmi_thumb_ldrh();
+					//thumb_ldrh();
 					break;
 				case 0x7:	/*110 HS0*/
-					//arm7tdmi_thumb_ldsh();
+					//thumb_ldsh();
 					break;
 				}
 				break;	
 			case 0x0C:	/*01100 - BL=00*/
-				//arm7tdmi_thumb_str_imm();	/*str rd,[rb,#imm]*/
+				//thumb_str_imm();	/*str rd,[rb,#imm]*/
 				break;
 			case 0x0D:	/*01101 - BL=01*/
-				//arm7tdmi_thumb_ldr_imm();	/*ldr rd,[rb,#imm]*/
+				//thumb_ldr_imm();	/*ldr rd,[rb,#imm]*/
 				break;
 			case 0x0E:	/*01110 - BL=10*/
-				//arm7tdmi_thumb_strb_imm();/*strb rd,[rb,#imm]*/
+				//thumb_strb_imm();/*strb rd,[rb,#imm]*/
 				break;
 			case 0x0F:	/*01111 - BL=11*/
-				//arm7tdmi_thumb_ldrb_imm();/*ldrb rd,[rb,#imm]*/
+				//thumb_ldrb_imm();/*ldrb rd,[rb,#imm]*/
 				break;
 			case 0x10:	/*10000 - L=0*/
-				//arm7tdmi_thumb_strh_imm();/*strh rd,[rb,#imm]*/
+				//thumb_strh_imm();/*strh rd,[rb,#imm]*/
 				break;
 			case 0x11:	/*10001 - L=1*/
-				//arm7tdmi_thumb_ldrh_imm();/*ldrh rd,[rb,#imm]*/
+				//thumb_ldrh_imm();/*ldrh rd,[rb,#imm]*/
 				break;
 			case 0x12:	/*10010 - S=0*/
-				//arm7tdmi_thumb_str_sp();/*str rd,[SP,#imm]*/
+				//thumb_str_sp();/*str rd,[SP,#imm]*/
 				break;
 			case 0x13:	/*10011 - S=1*/
-				//arm7tdmi_thumb_ldr_sp();/*ldr rd,[SP,#imm]*/
+				//thumb_ldr_sp();/*ldr rd,[SP,#imm]*/
 				break;
 			case 0x14:	/*10100 - S=0*//*add rd,PC,#imm*/
 			case 0x15:	/*10101 - S=1*//*add rd,SP,#imm*/
-				//arm7tdmi_thumb_add_adr();
+				//thumb_add_adr();
 				break;
 			case 0x16:	/*10110*/
 			case 0x17:	/*10111*/
 				//if(BIT_N(opcode,10)){
 			/*PUSH/POP - 14*/
 				//	if(BIT_N(opcode,11)){	/*L*/
-				//		arm7tdmi_thumb_pop();/*POP {Rlist}*/
+				//		thumb_pop();/*POP {Rlist}*/
 				//	}else{
-				//		arm7tdmi_thumb_push();/*PUSH {Rlist}*/
+				//		thumb_push();/*PUSH {Rlist}*/
 				//	}
 				//}else{
 				//	if(!((opcode >> 8) & 0x7)){	/*000S*/
-				//		arm7tdmi_thumb_add_sp();/*add SP,#+-imm*/
+				//		thumb_add_sp();/*add SP,#+-imm*/
 				//	}
 				//	break;
 				//}
 				break;
 			case 0x18:	/*11000*/
-				//arm7tdmi_thumb_stmia();/*stmia rb!,{Rlist}*/
+				//thumb_stmia();/*stmia rb!,{Rlist}*/
 				break;
 			case 0x19:	/*11001*/
-				//arm7tdmi_thumb_ldmia();/*ldmia rb!,{Rlist}*/
+				//thumb_ldmia();/*ldmia rb!,{Rlist}*/
 				break;
 			case 0x1A:	/*11010*/
 			case 0x1B:	/*11011*/
 				//if(((opcode >> 8) & 0xF) == 0xF){
-				//	arm7tdmi_thumb_swi();
+				//	thumb_swi();
 				//}else{
-				//	arm7tdmi_thumb_bxx();
+				//	thumb_bxx();
 				//}
 				break;
 			case 0x1C:	/*11100*/

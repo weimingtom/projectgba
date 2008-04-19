@@ -33,6 +33,11 @@ namespace pGBA
 			string str;
 			byte	opcode_11_5, opcode_6_5, opcode_9_3;
 			
+			string[] aluOps = new string[16]
+            {
+               "and","eor","lsl","lsr","asr","adc","sbc","ror","tst","neg","cmp","cmn","orr","mul","bic","mvn"
+            };
+			
 			opcode		= myEngine.myMemory.ReadShort(adr);
 			opcode_11_5	= (byte)((opcode >> 11) & 0x1F);	/*11-15 5bit*/
 			opcode_6_5	= (byte)((opcode >> 6) & 0x1F); 	/*6-10 5bit*/
@@ -80,6 +85,9 @@ namespace pGBA
 				break;
 			case 0x07:	/*00111*/
 				str += String.Format("sub r{0:d}, #0x{1:x2}", ((opcode >> 8) & 0x07), (opcode & 0xFF));
+				break;
+			case 0x08:	/*01000*/
+				str += String.Format("{0:s} r{1:d}, r{2:d}", aluOps[((opcode >> 6)&0x0F)], (opcode & 0x7), ((opcode >> 3) & 0x7));
 				break;
 				
 			default: 
