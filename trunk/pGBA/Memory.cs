@@ -28,13 +28,17 @@ namespace pGBA
 		
 		public byte ReadByte(uint adr)
 		{
-			//Needs to be implemented
+			if((adr >= 0x08000000) && (adr <(0x08000000+romSize)-1))
+			{
+				adr -= 0x08000000;
+				return (byte)(rom[adr]);
+			}
+			
 			return (byte)0;
 		}
 		
 		public ushort ReadShort(uint adr)
 		{
-			//Needs to be implemented
 			if((adr >= 0x08000000) && (adr <(0x08000000+romSize)-1))
 			{
 				adr -= 0x08000000;
@@ -46,7 +50,11 @@ namespace pGBA
 		
 		public uint ReadWord(uint adr)
 		{
-			//Needs to be implemented
+			if((adr >= 0x08000000) && (adr <(0x08000000+romSize)-1))
+			{
+				adr -= 0x08000000;
+				return (uint)(rom[adr]|rom[adr+1]<<8|rom[adr+2]<<16|rom[adr+3]<<24);
+			}
 			return (uint)0;
 		}
 		

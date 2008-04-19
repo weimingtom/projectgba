@@ -61,6 +61,8 @@ namespace pGBA
 		
 		public void Reset()
 		{
+			
+			//Only here to test opcodes
 			Registers[1] = 0x00000001;
 			Registers[2] = 0x00000100;
 			

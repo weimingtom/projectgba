@@ -42,12 +42,12 @@ namespace pGBA
 			this.openGBAToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.toolStripSeparator1 = new System.Windows.Forms.ToolStripSeparator();
 			this.exitToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.toolsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
+			this.disassemblerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.aboutToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			this.statusStrip = new System.Windows.Forms.StatusStrip();
 			this.FPS_Indicator = new System.Windows.Forms.ToolStripStatusLabel();
 			this.openFileDialog = new System.Windows.Forms.OpenFileDialog();
-			this.toolsToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
-			this.disassemblerToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			((System.ComponentModel.ISupportInitialize)(this.scrnBox)).BeginInit();
 			this.menuStrip.SuspendLayout();
 			this.statusStrip.SuspendLayout();
@@ -86,27 +86,43 @@ namespace pGBA
 			// openGBAToolStripMenuItem
 			// 
 			this.openGBAToolStripMenuItem.Name = "openGBAToolStripMenuItem";
-			this.openGBAToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+			this.openGBAToolStripMenuItem.Size = new System.Drawing.Size(123, 22);
 			this.openGBAToolStripMenuItem.Text = "&Open GBA";
 			this.openGBAToolStripMenuItem.Click += new System.EventHandler(this.OpenGBAToolStripMenuItemClick);
 			// 
 			// toolStripSeparator1
 			// 
 			this.toolStripSeparator1.Name = "toolStripSeparator1";
-			this.toolStripSeparator1.Size = new System.Drawing.Size(149, 6);
+			this.toolStripSeparator1.Size = new System.Drawing.Size(120, 6);
 			// 
 			// exitToolStripMenuItem
 			// 
 			this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-			this.exitToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+			this.exitToolStripMenuItem.Size = new System.Drawing.Size(123, 22);
 			this.exitToolStripMenuItem.Text = "&Exit";
 			this.exitToolStripMenuItem.Click += new System.EventHandler(this.ExitToolStripMenuItemClick);
+			// 
+			// toolsToolStripMenuItem
+			// 
+			this.toolsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
+									this.disassemblerToolStripMenuItem});
+			this.toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
+			this.toolsToolStripMenuItem.Size = new System.Drawing.Size(44, 20);
+			this.toolsToolStripMenuItem.Text = "&Tools";
+			// 
+			// disassemblerToolStripMenuItem
+			// 
+			this.disassemblerToolStripMenuItem.Name = "disassemblerToolStripMenuItem";
+			this.disassemblerToolStripMenuItem.Size = new System.Drawing.Size(136, 22);
+			this.disassemblerToolStripMenuItem.Text = "&Disassembler";
+			this.disassemblerToolStripMenuItem.Click += new System.EventHandler(this.DisassemblerToolStripMenuItemClick);
 			// 
 			// aboutToolStripMenuItem
 			// 
 			this.aboutToolStripMenuItem.Name = "aboutToolStripMenuItem";
 			this.aboutToolStripMenuItem.Size = new System.Drawing.Size(48, 20);
 			this.aboutToolStripMenuItem.Text = "&About";
+			this.aboutToolStripMenuItem.Click += new System.EventHandler(this.AboutToolStripMenuItemClick);
 			// 
 			// statusStrip
 			// 
@@ -127,21 +143,6 @@ namespace pGBA
 			// openFileDialog
 			// 
 			this.openFileDialog.Filter = "GBA Rom files (*.gba)|*.gba";
-			// 
-			// toolsToolStripMenuItem
-			// 
-			this.toolsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-									this.disassemblerToolStripMenuItem});
-			this.toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
-			this.toolsToolStripMenuItem.Size = new System.Drawing.Size(44, 20);
-			this.toolsToolStripMenuItem.Text = "&Tools";
-			// 
-			// disassemblerToolStripMenuItem
-			// 
-			this.disassemblerToolStripMenuItem.Name = "disassemblerToolStripMenuItem";
-			this.disassemblerToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
-			this.disassemblerToolStripMenuItem.Text = "&Disassembler";
-			this.disassemblerToolStripMenuItem.Click += new System.EventHandler(this.DisassemblerToolStripMenuItemClick);
 			// 
 			// MainForm
 			// 
