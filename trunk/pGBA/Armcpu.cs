@@ -55,8 +55,6 @@ namespace pGBA
 			myThumb = new Thumb(myEngine);
 			
 			Registers = new uint[17];
-			
-			Reset();
 		}
 		
 		public void Reset()
@@ -69,7 +67,13 @@ namespace pGBA
 			//Init Default Registers
 			Registers[13] = 0x03007F00;
 			Registers[15] = 0x08000000;
-			Registers[16] = 0x0000001F;
+			
+			//Default to thumb mode atleast for now
+			//Registers[16] = 0x0000001F;
+			Registers[16] = 0x00000003F;
+			
+			myThumb.Begin();
+				
 		}
 		
 		public void Emulate(uint cpu_cycles)
@@ -86,6 +90,8 @@ namespace pGBA
 		
 		public void Step()
 		{
+			cycles = 20;
+			
 			//if(Registers[16] & 0x20) //Thumb State
 				myThumb.Emulate();
 			//else

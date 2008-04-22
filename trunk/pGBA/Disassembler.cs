@@ -87,7 +87,35 @@ namespace pGBA
 				str += String.Format("sub r{0:d}, #0x{1:x2}", ((opcode >> 8) & 0x07), (opcode & 0xFF));
 				break;
 			case 0x08:	/*01000*/
-				str += String.Format("{0:s} r{1:d}, r{2:d}", aluOps[((opcode >> 6)&0x0F)], (opcode & 0x7), ((opcode >> 3) & 0x7));
+				if(((opcode >> 10)&1)==0)
+				{
+					str += String.Format("{0:s} r{1:d}, r{2:d}", aluOps[((opcode >> 6)&0x0F)], (opcode & 0x7), ((opcode >> 3) & 0x7));
+				}
+				else
+				{
+					switch(((opcode >> 8)&3))
+					{
+						case 0:
+							str += String.Format("addhi r{0:d}, r{1:d}", (opcode & 0x7), ((opcode >> 3) & 0x7));
+							break;
+						case 1:
+							str += String.Format("cmphi r{0:d}, r{1:d}", (opcode & 0x7), ((opcode >> 3) & 0x7));
+							break;
+						case 2:
+							if(((opcode & 0x7)==0x08) && (((opcode >> 3) & 0x7)==0x08))
+							{
+								str += "nop";
+							}
+							else
+							{
+								str += String.Format("movhi r{0:d}, r{1:d}", (opcode & 0x7), ((opcode >> 3) & 0x7));
+							}
+							break;
+						case 3:
+							str += String.Format("bx r{0:d}", ((opcode >> 3) & 0x7));
+							break;
+					}
+				}
 				break;
 				
 			default: 

@@ -51,7 +51,7 @@ namespace pGBA
         private const int OP_MVN = 0xF;
         
 		private Engine myEngine;
-		private ushort	opcode, cycles;
+		private ushort	opcode, opcodeQueue, cycles;
 		private uint zero, carry, negative, overflow;
 		private uint[] registers;
 		
@@ -76,7 +76,7 @@ namespace pGBA
 		
         #region Opcodes
         
-        //Section 1 Starts here
+        #region Section 1
 		void thumb_lsl_imm()
 		{
             // lsl rd, rm, #immed
@@ -142,17 +142,17 @@ namespace pGBA
 
 			cycles = 1;
 		}
+		#endregion
 		
-		//Section 2 Starts here
+		#region Section 2
 		void thumb_add_reg()
 		{
 			// add rd, rs, rn
 			int rd = opcode & 0x07;
             int rs = (opcode >> 3) & 0x07;
             int rn = (opcode >> 6) & 0x07;
-            
-            //Has to be unchecked or causes error
-            registers[rd] = unchecked(registers[rs] + registers[rn]);
+
+            registers[rd] = registers[rs] + registers[rn];
             
             OverflowCarryAdd(registers[rs],registers[rn],registers[rd]);
             
@@ -169,8 +169,7 @@ namespace pGBA
             int rs = (opcode >> 3) & 0x07;
             int rn = (opcode >> 6) & 0x07;
             
-            //Has to be unchecked or causes error
-            registers[rd] = unchecked(registers[rs] - registers[rn]);
+            registers[rd] = registers[rs] - registers[rn];
             
             OverflowCarrySub(registers[rs],registers[rn],registers[rd]);
             
@@ -187,8 +186,7 @@ namespace pGBA
             int rs = (opcode >> 3) & 0x07;
             uint immed = (uint)((opcode >> 6) & 0x07);
             
-            //Has to be unchecked or causes error
-            registers[rd] = unchecked(registers[rs] + immed);
+            registers[rd] = registers[rs] + immed;
             
             OverflowCarryAdd(registers[rs],immed,registers[rd]);
             
@@ -205,8 +203,7 @@ namespace pGBA
             int rs = (opcode >> 3) & 0x07;
             uint immed = (uint)((opcode >> 6) & 0x07);
             
-            //Has to be unchecked or causes error
-            registers[rd] = unchecked(registers[rs] - immed);
+            registers[rd] = registers[rs] - immed;
             
             OverflowCarrySub(registers[rs],immed,registers[rd]);
             
@@ -215,8 +212,9 @@ namespace pGBA
             
             cycles = 1;
 		}
+		#endregion
 		
-		//Section 3 Starts here
+		#region Section 3
 		void thumb_mov()
 		{
 			// mov rd, #immed
@@ -279,8 +277,9 @@ namespace pGBA
             
             cycles = 1;
 		}
+		#endregion
 		
-		//Section 4 Starts here
+		#region Section 4
 		void thumb_alu_and()
 		{
 			//and rd,rs
@@ -290,7 +289,7 @@ namespace pGBA
 			registers[rd] &= registers[rs];
 			
 			negative = registers[rd] >> 31;
-            zero = registers[rd] == 0 ? 1U : 0U;
+			zero = (registers[rd] == 0) ? 1U : 0U;
             
             cycles = 1;
 		}
@@ -304,7 +303,7 @@ namespace pGBA
 			registers[rd] ^= registers[rs];
 			
 			negative = registers[rd] >> 31;
-            zero = registers[rd] == 0 ? 1U : 0U;
+			zero = (registers[rd] == 0) ? 1U : 0U;
             
             cycles = 1;
 		}
@@ -314,7 +313,7 @@ namespace pGBA
 			//lsl rd,rs
 			int rd = (opcode & 0x07);
 			int rs = ((opcode>>3) & 0x07);
-			int shiftAmount = (registers[rs] & 0xFF);
+			int shiftAmt = (int)(registers[rs] & 0xFF);
 			
 			if (shiftAmt == 0)
             {
@@ -337,9 +336,10 @@ namespace pGBA
             }
 			
 			negative = registers[rd] >> 31;
-            zero = registers[rd] == 0 ? 1U : 0U;
+			zero = (registers[rd] == 0) ? 1U : 0U;
             
-            cycles = 1;
+            //Is it 1 or 2 here??
+            cycles = 2;
 		}
 		
 		void thumb_alu_lsr()
@@ -347,7 +347,7 @@ namespace pGBA
 			//lsr rd,rs
 			int rd = (opcode & 0x07);
 			int rs = ((opcode>>3) & 0x07);
-			int shiftAmount = (registers[rs] & 0xFF);
+			int shiftAmt = (int)(registers[rs] & 0xFF);
 			
 			if (shiftAmt == 0)
             {
@@ -355,12 +355,12 @@ namespace pGBA
             }
             else if (shiftAmt < 32)
             {
-            	carry = (registers[rd] >> (32 - shiftAmt)) & 0x1;
+            	carry = (registers[rd] >> (shiftAmt - 1)) & 0x1;
             	registers[rd] >>= shiftAmt;
             }
             else if (shiftAmt == 32)
             {
-            	carry = registers[rd] & 0x1;
+            	carry = (registers[rd] >> 31) & 0x1;
             	registers[rd] = 0;
             }
             else
@@ -370,17 +370,547 @@ namespace pGBA
             }
 			
 			negative = registers[rd] >> 31;
-            zero = registers[rd] == 0 ? 1U : 0U;
+			zero = (registers[rd] == 0) ? 1U : 0U;
+            
+            //Is it 1 or 2 here??
+            cycles = 2;
+		}
+		
+		void thumb_alu_asr()
+		{
+			//asr rd,rs
+			int rd = (opcode & 0x07);
+			int rs = ((opcode>>3) & 0x07);
+			int shiftAmt = (int)(registers[rs] & 0xFF);
+			
+			if (shiftAmt == 0)
+            {
+            	// Don't need to do anything
+            }
+            else if (shiftAmt < 32)
+            {
+            	carry = (registers[rd] >> (shiftAmt - 1)) & 0x1;
+                registers[rd] = (uint)(((int)registers[rd]) >> shiftAmt);
+            }
+            else if (shiftAmt == 32)
+            {
+            	carry = (registers[rd] >> 31) & 0x1;
+            	//May need some checks here unsure
+            	registers[rd] = 0;
+            }
+            else
+            {
+            	carry = 0;
+                registers[rd] = 0;
+            }
+			
+			negative = registers[rd] >> 31;
+			zero = (registers[rd] == 0) ? 1U : 0U;
+            
+			//Is it 1 or 2 here??
+            cycles = 2;
+		}
+		
+		void thumb_alu_adc()
+		{
+			//adc rd,rs
+			int rd = (opcode & 0x07);
+			int rs = ((opcode>>3) & 0x07);
+			uint temp = registers[rd];
+			
+			registers[rd] += registers[rs] + carry;
+			
+			this.OverflowCarryAdd(temp, registers[rs], registers[rd]);
+			negative = registers[rd] >> 31;
+			zero = (registers[rd] == 0) ? 1U : 0U;
             
             cycles = 1;
 		}
-		//Section 5 Starts here
-		//Section 6 Starts here
-		//Section 7 Starts here
-		//Section 8 Starts here
-		//Section 9 Starts here
-		//Section 10 Starts here
-		//Section 11 Starts here
+		
+		void thumb_alu_sbc()
+		{
+			//sbc rd,rs
+			int rd = (opcode & 0x07);
+			int rs = ((opcode>>3) & 0x07);
+			uint temp = registers[rd];
+			
+			registers[rd] = (registers[rd] - registers[rs]) - (1U - carry);
+			
+			this.OverflowCarrySub(temp, registers[rs], registers[rd]);
+			negative = registers[rd] >> 31;
+			zero = (registers[rd] == 0) ? 1U : 0U;
+            
+            cycles = 1;
+		}
+		
+		void thumb_alu_ror()
+		{
+			//asr rd,rs
+			int rd = (opcode & 0x07);
+			int rs = ((opcode>>3) & 0x07);
+			int shiftAmt = (int)(registers[rs] & 0xFF);
+			
+			if (shiftAmt == 0)
+            {
+            	// Don't need to do anything
+            }
+            else if ((shiftAmt & 0x1F) == 0)
+            {
+            	carry = registers[rd] >> 31;
+            }
+            else
+            {
+            	shiftAmt &= 0x1F;
+            	carry = (registers[rd] >> (shiftAmt - 1)) & 0x1;
+            	registers[rd] = (registers[rd] >> shiftAmt) | (registers[rd] << (32 - shiftAmt));
+            }
+			
+			negative = registers[rd] >> 31;
+			zero = (registers[rd] == 0) ? 1U : 0U;
+            
+			//Is it 1 or 2 here??
+            cycles = 2;
+		}
+		
+		void thumb_alu_tst()
+		{
+			//tst rd,rs
+			int rd = (opcode & 0x07);
+			int rs = ((opcode>>3) & 0x07);
+			
+			uint temp = registers[rd] & registers[rs];
+			
+			negative = temp >> 31;
+			zero = (temp == 0) ? 1U : 0U;
+            
+            cycles = 1;
+		}
+		
+		void thumb_alu_neg()
+		{
+			//neg rd,rs
+			int rd = (opcode & 0x07);
+			int rs = ((opcode>>3) & 0x07);
+			
+			registers[rd] = 0 - registers[rs];
+			
+			this.OverflowCarrySub(0, registers[rs], registers[rd]);
+			negative = registers[rd] >> 31;
+			zero = (registers[rd] == 0) ? 1U : 0U;
+            
+            cycles = 1;
+		}
+		
+		void thumb_alu_cmp()
+		{
+			//cmp rd,rs
+			int rd = (opcode & 0x07);
+			int rs = ((opcode>>3) & 0x07);
+			uint temp = registers[rd] - registers[rs];
+			
+			this.OverflowCarryAdd(registers[rd], registers[rs], temp);
+			negative = temp >> 31;
+			zero = (temp == 0) ? 1U : 0U;
+            
+            cycles = 1;
+		}
+		
+		void thumb_alu_cmn()
+		{
+			//cmn rd,rs
+			int rd = (opcode & 0x07);
+			int rs = ((opcode>>3) & 0x07);
+			uint temp = registers[rd] + registers[rs];
+			
+			this.OverflowCarrySub(registers[rd], registers[rs], temp);
+			negative = temp >> 31;
+			zero = (temp == 0) ? 1U : 0U;
+            
+            cycles = 1;
+		}
+		
+		void thumb_alu_orr()
+		{
+			//orr rd,rs
+			int rd = (opcode & 0x07);
+			int rs = ((opcode>>3) & 0x07);
+			
+			registers[rd] |= registers[rs];
+			
+			negative = registers[rd] >> 31;
+			zero = (registers[rd] == 0) ? 1U : 0U;
+            
+            cycles = 1;
+		}
+		
+		void thumb_alu_mul()
+		{
+			//mul rd,rs
+			int rd = (opcode & 0x07);
+			int rs = ((opcode>>3) & 0x07);
+			
+			//Need to do mul cycle claculations here
+			//hard coded to 3 like in armv5 atleast for now
+			uint mulCycles = 3;
+			
+			registers[rd] *= registers[rs];
+			
+			myEngine.myCPU.cycles -= mulCycles;
+			
+			negative = registers[rd] >> 31;
+			zero = (registers[rd] == 0) ? 1U : 0U;
+            
+            cycles = 1;
+		}
+		
+		void thumb_alu_bic()
+		{
+			//bic rd,rs
+			int rd = (opcode & 0x07);
+			int rs = ((opcode>>3) & 0x07);
+			
+			registers[rd] &= ~registers[rs];
+			
+			negative = registers[rd] >> 31;
+			zero = (registers[rd] == 0) ? 1U : 0U;
+            
+            cycles = 1;
+		}
+		
+		void thumb_alu_mvn()
+		{
+			//mvn rd,rs
+			int rd = (opcode & 0x07);
+			int rs = ((opcode>>3) & 0x07);
+			
+			registers[rd] = ~registers[rs];
+			
+			negative = registers[rd] >> 31;
+			zero = (registers[rd] == 0) ? 1U : 0U;
+            
+            cycles = 1;
+		}
+		#endregion
+		
+		#region Section 5
+		void thumb_add_hi()
+		{
+			//addhi rd,rs
+			int rd = ((opcode & (1 << 7)) >> 4) | (opcode & 0x7);
+            int rs = (opcode >> 3) & 0xF;
+			
+			registers[rd] += registers[rs];
+			
+			if (rd == 15)
+            {
+                registers[rd] &= ~1U;
+                registers[15] += 2;
+                cycles = 3;
+            }
+			else
+			{
+	           cycles = 1;
+			}
+		}
+		
+		void thumb_cmp_hi()
+		{
+			//cmphi rd,rs
+			int rd = ((opcode & (1 << 7)) >> 4) | (opcode & 0x7);
+            int rs = (opcode >> 3) & 0xF;
+			uint temp = registers[rd] - registers[rs];
+
+            negative = temp >> 31;
+            zero = (temp == 0) ? 1U : 0U;
+            OverflowCarrySub(registers[rd], registers[rs], temp);
+            
+	        cycles = 1;
+		}
+		
+		void thumb_mov_hi()
+		{
+			//movhi rd,rs
+			int rd = ((opcode & (1 << 7)) >> 4) | (opcode & 0x7);
+            int rs = (opcode >> 3) & 0xF;
+
+            registers[rd] = registers[rs];
+            
+            if (rd == 15)
+            {
+                registers[rd] &= ~1U;
+                FlushQueue();
+                cycles = 3;
+            }
+			else
+			{
+	           cycles = 1;
+			}
+		}
+		
+		void thumb_bx()
+		{
+			//bx rs
+            int rs = (opcode >> 3) & 0xF;
+
+            registers[16] &= ~Armcpu.T_MASK;
+            registers[16] |= (registers[rs] & 1) << Armcpu.T_BIT;
+
+            registers[15] = registers[rs] & (~1U);
+
+            // Check for branch back to Arm Mode
+            if ((registers[16] & Armcpu.T_MASK) != Armcpu.T_MASK)
+            {
+                return;
+            }
+
+            FlushQueue();
+            
+	        cycles = 3;
+		}
+		#endregion
+
+		#region Section 6
+		void thumb_ldr_pc()
+		{
+			//ldr rd,[pc,#immed]
+			int rd = ((opcode>>8) & 0x7);
+			uint immed = (uint)(opcode & 0xFF);
+			
+			myEngine.myMemory.ReadWord((registers[15] & ~2U) + (immed * 4));
+		
+	        cycles = 3;
+		}
+		#endregion
+		
+		//Might be buggy needs testing
+		#region Section 7
+		void thumb_str()
+		{
+			//str rd,[rb,ro]
+			int rd = (opcode & 0x07);
+			int rb = ((opcode>>3) & 0x07);
+			int ro = ((opcode>>6) & 0x07);
+			
+			myEngine.myMemory.WriteWord(registers[rb] + registers[ro], registers[rd]);
+            
+            cycles = 2;
+		}
+		
+		void thumb_strb()
+		{
+			//strb rd,[rb,ro]
+			int rd = (opcode & 0x07);
+			int rb = ((opcode>>3) & 0x07);
+			int ro = ((opcode>>6) & 0x07);
+			
+			myEngine.myMemory.WriteByte(registers[rb] + registers[ro], (byte)registers[rd]);
+            
+            cycles = 2;
+		}
+		
+		void thumb_ldr()
+		{
+			//ldr rd,[rb,ro]
+			int rd = (opcode & 0x07);
+			int rb = ((opcode>>3) & 0x07);
+			int ro = ((opcode>>6) & 0x07);
+			
+			registers[rd] = myEngine.myMemory.ReadWord(registers[rb] + registers[ro]);
+            
+            cycles = 3;
+		}
+		
+		void thumb_ldrb()
+		{
+			//ldrb rd,[rb,ro]
+			int rd = (opcode & 0x07);
+			int rb = ((opcode>>3) & 0x07);
+			int ro = ((opcode>>6) & 0x07);
+			
+			registers[rd] = (uint)myEngine.myMemory.ReadByte(registers[rb] + registers[ro]);
+            
+            cycles = 3;
+		}
+		#endregion
+		
+		//Might be buggy needs testing
+		#region Section 8
+		void thumb_strh()
+		{
+			//strh rd,[rb,ro]
+			int rd = (opcode & 0x07);
+			int rb = ((opcode>>3) & 0x07);
+			int ro = ((opcode>>6) & 0x07);
+			
+			myEngine.myMemory.WriteShort(registers[rb] + registers[ro], (ushort)registers[rd]);
+            
+            cycles = 2;
+		}
+		
+		void thumb_ldsb()
+		{
+			//ldsb rd,[rb,ro]
+			int rd = (opcode & 0x07);
+			int rb = ((opcode>>3) & 0x07);
+			int ro = ((opcode>>6) & 0x07);
+			
+			registers[rd] = (uint)((sbyte)myEngine.myMemory.ReadByte(registers[rb] + registers[ro]));
+            
+            cycles = 3;
+		}
+		
+		void thumb_ldrh()
+		{
+			//ldrh rd,[rb,ro]
+			int rd = (opcode & 0x07);
+			int rb = ((opcode>>3) & 0x07);
+			int ro = ((opcode>>6) & 0x07);
+			
+			registers[rd] = (uint)myEngine.myMemory.ReadShort(registers[rb] + registers[ro]);
+            
+            cycles = 3;
+		}
+		
+		void thumb_ldsh()
+		{
+			//ldsh rd,[rb,ro]
+			int rd = (opcode & 0x07);
+			int rb = ((opcode>>3) & 0x07);
+			int ro = ((opcode>>6) & 0x07);
+			
+			registers[rd] = (uint)((short)myEngine.myMemory.ReadShort(registers[rb] + registers[ro]));
+            
+            cycles = 3;
+		}
+		#endregion
+		
+		//Might be buggy needs testing
+		#region Section 9
+		void thumb_str_imm()
+		{
+			//str rd,[rb,#immed]
+			int rd = (opcode & 0x07);
+			int rb = ((opcode>>3) & 0x07);
+			uint immed = (uint)(((opcode>>6) & 0x1F) * 4);
+			
+			myEngine.myMemory.WriteWord(registers[rb] + immed, registers[rd]);
+            
+            cycles = 2;
+		}
+		
+		void thumb_ldr_imm()
+		{
+			//ldr rd,[rb,#immed]
+			int rd = (opcode & 0x07);
+			int rb = ((opcode>>3) & 0x07);
+			uint immed = (uint)(((opcode>>6) & 0x1F) * 4);
+			
+			registers[rd] = myEngine.myMemory.ReadWord(registers[rb] + immed);
+            
+            cycles = 3;
+		}
+		
+		void thumb_strb_imm()
+		{
+			//strb rd,[rb,#immed]
+			int rd = (opcode & 0x07);
+			int rb = ((opcode>>3) & 0x07);
+			uint immed = (uint)((opcode>>6) & 0x1F);
+			
+			myEngine.myMemory.WriteByte(registers[rb] + immed, (byte)registers[rd]);
+            
+            cycles = 2;
+		}
+		
+		void thumb_ldrb_imm()
+		{
+			//ldrb rd,[rb,#immed]
+			int rd = (opcode & 0x07);
+			int rb = ((opcode>>3) & 0x07);
+			uint immed = (uint)((opcode>>6) & 0x1F);
+
+			registers[rd] = (uint)myEngine.myMemory.ReadByte(registers[rb] + immed);
+            
+            cycles = 2;
+		}
+		#endregion
+		
+		//Might be buggy needs testing
+		#region Section 10
+		void thumb_strh_imm()
+		{
+			//strh rd,[rb,#immed]
+			int rd = (opcode & 0x07);
+			int rb = ((opcode>>3) & 0x07);
+			uint immed = (uint)(((opcode>>6) & 0x1F) * 2);
+			
+			myEngine.myMemory.WriteShort(registers[rb] + immed, (ushort)registers[rd]);
+            
+            cycles = 2;
+		}
+		
+		void thumb_ldrh_imm()
+		{
+			//ldrh rd,[rb,#immed]
+			int rd = (opcode & 0x07);
+			int rb = ((opcode>>3) & 0x07);
+			uint immed = (uint)(((opcode>>6) & 0x1F) * 2);
+
+			registers[rd] = (uint)myEngine.myMemory.ReadShort(registers[rb] + immed);
+            
+            cycles = 3;
+		}
+		#endregion
+		
+		//Might be buggy needs testing
+		#region Section 11
+		void thumb_str_sp()
+		{
+			//str rd,[sp,#immed]
+			int rd = ((opcode>>8) & 0x07);
+			uint immed = (uint)(((opcode>>6) & 0xFF) * 4);
+			
+			myEngine.myMemory.WriteWord(registers[13] + immed, registers[rd]);
+            
+            cycles = 2;
+		}
+		
+		void thumb_ldr_sp()
+		{
+			//ldr rd,[sp,#immed]
+			int rd = ((opcode>>8) & 0x07);
+			uint immed = (uint)(((opcode>>6) & 0xFF) * 4);
+			
+			registers[rd] = myEngine.myMemory.ReadWord(registers[13] + immed);
+            
+            cycles = 3;
+		}
+		#endregion
+		
+		//Might be buggy needs testing
+		#region Section 12
+		void thumb_add_pc()
+		{
+			//add  rd,pc,#nn
+			int rd = ((opcode>>8) & 0x07);
+			uint immed = (uint)((opcode& 0xFF) * 4);
+			
+			registers[rd] = ((registers[15] & ~2U) + immed);
+			
+			cycles = 1;
+		}
+		
+		void thumb_add_sp()
+		{
+			//add  rd,sp,#nn
+			int rd = ((opcode>>8) & 0x07);
+			uint immed = (uint)((opcode& 0xFF) * 4);
+			
+			registers[rd] = (registers[13] + immed);
+			
+			cycles = 1;
+		}
+		#endregion
 		//Section 12 Starts here
 		//Section 13 Starts here
 		//Section 14 Starts here
@@ -409,20 +939,27 @@ namespace pGBA
             overflow = (myEngine.myCPU.Registers[16] >> Armcpu.V_BIT) & 1;
         }
         #endregion
+        
+        public void Begin()
+        {
+        	registers = myEngine.myCPU.Registers;
+        	
+        	FlushQueue();
+        }
 		
 		public uint Emulate()
 		{
 			byte	opcode_11_5, opcode_6_5, opcode_9_3;
-			uint 	address=myEngine.myCPU.Registers[15];
 			
-			opcode		= myEngine.myMemory.ReadShort(address);
+			opcode 		= opcodeQueue;
+            opcodeQueue = myEngine.myMemory.ReadShort(registers[15]);
+            registers[15] += 2;
+            
 			opcode_11_5	= (byte)((opcode >> 11) & 0x1F);	/*11-15 5bit*/
 			opcode_6_5	= (byte)((opcode >> 6) & 0x1F);
 			opcode_9_3	= (byte)((opcode >> 9) & 0x07);
 			
 			UnpackFlags();
-			
-			registers = myEngine.myCPU.Registers;
 			
 			switch(opcode_11_5){
 			case 0x00:	/*00000*/
@@ -464,116 +1001,140 @@ namespace pGBA
 				thumb_sub();
 				break;
 			case 0x08:	/*01000*/
-				switch((opcode >> 6)&0x0F){
-				case 0x00:
-					thumb_alu_and();
-					break;
-				case 0x01:
-					thumb_alu_eor();
-					break;
-				case 0x02:
-					thumb_alu_lsl();
-					break;
-				case 0x03:
-					//thumb_alu_lsr();
-					break;
-				case 0x04:
-					//thumb_alu_asr();
-					break;
-				case 0x05:
-					//thumb_alu_adc();
-					break;
-				case 0x06:
-					//thumb_alu_sbc();
-					break;
-				case 0x07:
-					//thumb_alu_ror();
-					break;
-				case 0x08:
-					//thumb_alu_tst();
-					break;
-				case 0x09:
-					//thumb_alu_neg();
-					break;
-				case 0x0A:
-					//thumb_alu_cmp();
-					break;
-				case 0x0B:
-					//thumb_alu_cmn();
-					break;
-				case 0x0C:
-					//thumb_alu_orr();
-					break;
-				case 0x0D:
-					//thumb_alu_mul();
-					break;
-				case 0x0E:
-					//thumb_alu_bic();
-					break;
-				case 0x0F:
-					//thumb_alu_mvn();
-					break;
+				if(((opcode >> 10)&1)==0)
+				{
+					switch((opcode >> 6)&0x0F)
+					{
+						case 0x00:
+							thumb_alu_and();
+							break;
+						case 0x01:
+							thumb_alu_eor();
+							break;
+						case 0x02:
+							thumb_alu_lsl();
+							break;
+						case 0x03:
+							thumb_alu_lsr();
+							break;
+						case 0x04:
+							thumb_alu_asr();
+							break;
+						case 0x05:
+							thumb_alu_adc();
+							break;
+						case 0x06:
+							thumb_alu_sbc();
+							break;
+						case 0x07:
+							thumb_alu_ror();
+							break;
+						case 0x08:
+							thumb_alu_tst();
+							break;
+						case 0x09:
+							thumb_alu_neg();
+							break;
+						case 0x0A:
+							thumb_alu_cmp();
+							break;
+						case 0x0B:
+							thumb_alu_cmn();
+							break;
+						case 0x0C:
+							thumb_alu_orr();
+							break;
+						case 0x0D:
+							thumb_alu_mul();
+							break;
+						case 0x0E:
+							thumb_alu_bic();
+							break;
+						case 0x0F:
+							thumb_alu_mvn();
+							break;
+					}
+				}
+				else
+				{
+					switch(((opcode >> 8)&3))
+					{
+						case 0:
+							thumb_add_hi();
+							break;
+						case 1:
+							thumb_cmp_hi();
+							break;
+						case 2:
+							thumb_mov_hi();
+							break;
+						case 3:
+							thumb_bx();
+							break;
+					}
 				}
 				break;
 			case 0x09:	/*01001*/
-				//thumb_ldr_pc();
+				thumb_ldr_pc();
 				break;
 			case 0x0A:	/*01010*/
 			case 0x0B:	/*01011*/
 				switch(opcode_9_3){
 				case 0x0:	/*000 LB0*/
-					//thumb_str();
+					thumb_str();
 					break;
 				case 0x2:	/*010 LB0*/
-					//thumb_strb();
+					thumb_strb();
 					break;
 				case 0x4:	/*100 LB0*/
-					//thumb_ldr();
+					thumb_ldr();
 					break;
 				case 0x6:	/*110 LB0*/
-					//thumb_ldrb();
+					thumb_ldrb();
 					break;
 				case 0x1:	/*000 HS0*/
-					//thumb_strh();
+					thumb_strh();
 					break;
 				case 0x3:	/*010 HS0*/
-					//thumb_ldsb();
+					thumb_ldsb();
 					break;
 				case 0x5:	/*100 HS0*/
-					//thumb_ldrh();
+					thumb_ldrh();
 					break;
 				case 0x7:	/*110 HS0*/
-					//thumb_ldsh();
+					thumb_ldsh();
 					break;
 				}
 				break;	
 			case 0x0C:	/*01100 - BL=00*/
-				//thumb_str_imm();	/*str rd,[rb,#imm]*/
+				thumb_str_imm();	/*str rd,[rb,#imm]*/
 				break;
 			case 0x0D:	/*01101 - BL=01*/
-				//thumb_ldr_imm();	/*ldr rd,[rb,#imm]*/
+				thumb_ldr_imm();	/*ldr rd,[rb,#imm]*/
 				break;
 			case 0x0E:	/*01110 - BL=10*/
-				//thumb_strb_imm();/*strb rd,[rb,#imm]*/
+				thumb_strb_imm();/*strb rd,[rb,#imm]*/
 				break;
 			case 0x0F:	/*01111 - BL=11*/
-				//thumb_ldrb_imm();/*ldrb rd,[rb,#imm]*/
+				thumb_ldrb_imm();/*ldrb rd,[rb,#imm]*/
 				break;
 			case 0x10:	/*10000 - L=0*/
-				//thumb_strh_imm();/*strh rd,[rb,#imm]*/
+				thumb_strh_imm();/*strh rd,[rb,#imm]*/
 				break;
 			case 0x11:	/*10001 - L=1*/
-				//thumb_ldrh_imm();/*ldrh rd,[rb,#imm]*/
+				thumb_ldrh_imm();/*ldrh rd,[rb,#imm]*/
 				break;
 			case 0x12:	/*10010 - S=0*/
-				//thumb_str_sp();/*str rd,[SP,#imm]*/
+				thumb_str_sp();/*str rd,[SP,#imm]*/
 				break;
 			case 0x13:	/*10011 - S=1*/
-				//thumb_ldr_sp();/*ldr rd,[SP,#imm]*/
+				thumb_ldr_sp();/*ldr rd,[SP,#imm]*/
 				break;
 			case 0x14:	/*10100 - S=0*//*add rd,PC,#imm*/
+				thumb_add_pc();
+				break;
 			case 0x15:	/*10101 - S=1*//*add rd,SP,#imm*/
-				//thumb_add_adr();
+				thumb_add_sp();
 				break;
 			case 0x16:	/*10110*/
 			case 0x17:	/*10111*/
@@ -619,9 +1180,13 @@ namespace pGBA
 			
 			PackFlags();
 			
-			myEngine.myCPU.Registers[15] += 2;
-			
 			return cycles;
 		}
+		
+		private void FlushQueue()
+        {
+            opcodeQueue = myEngine.myMemory.ReadShort(registers[15]);
+            registers[15] += 2;
+        }
 	}
 }

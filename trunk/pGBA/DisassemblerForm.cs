@@ -44,19 +44,62 @@ namespace pGBA
 			RefreshDisasmList();
 		}
 		
-		void RefreshDisasmList()
+		private void UpdateDisassembly()
+        {
+            if (myEngine.myCPU != null && myEngine.myMemory != null)
+            {
+                //if (!inArm)
+                //{
+                    uint pc = (uint)(myEngine.myCPU.Registers[15] - 0x2U);
+                    int numItems = disasmList.Height / disasmList.ItemHeight;
+
+                    if (pc > curPC && pc < curPC + numItems * 2 - 2 && /*!prevInArm &&*/ disasmList.Items.Count > 0)
+                    {
+                        disasmList.SelectedIndex = (int)(pc - curPC) / 2;
+                        return;
+                    }
+
+                    curPC = pc - 0x2U;
+
+                    RefreshDisasmList();
+
+                    disasmList.SelectedIndex = (int)(pc - curPC) / 2;
+                //}
+                /*else
+                {
+                    uint pc = (uint)(processor.Registers[15] - 0x4U);
+                    int numItems = this.disassembly.Height / this.disassembly.ItemHeight;
+
+                    if (pc > this.curPC && pc < this.curPC + numItems * 4 - 4 && this.prevInArm && this.disassembly.Items.Count > 0)
+                    {
+                        this.disassembly.SelectedIndex = (int)(pc - this.curPC) / 4;
+                        return;
+                    }
+
+                    this.curPC = pc - 0x4U;
+
+                    this.RefreshDisassembly(processor, memory);
+
+                    this.disassembly.SelectedIndex = (int)(pc - this.curPC) / 4;
+                }*/
+
+                //this.DisAsmScrollBar.Value = ((int)this.curPC) < 0 ? 0 : (int)this.curPC;
+            }
+        }
+		
+		private void RefreshDisasmList()
 		{
 			int i=0;
 			uint tAdr=0;
-			
-			for(i=0; i<17; i++)
+
+			for(i=0; i<20; i++)
 			{
 				tAdr = (uint)(curPC+(i*2));
 				disasmList.Items[i] = disasm.DisasmThumb(tAdr);
 			}
 		}
 		
-		void RefreshRegisterList()
+		private void RefreshRegisterList()
 		{
 			int i=0;
 			string temp;
@@ -78,17 +121,15 @@ namespace pGBA
 			ModeValue.Text =  Convert.ToString((myEngine.myCPU.Registers[16] & 0xFF),16).ToUpper();
 		}
 		
-		void TimerTick(object sender, EventArgs e)
+		private void TimerTick(object sender, EventArgs e)
 		{			
 			if(!autoUpdate.Checked) return;
 			
-			curPC = myEngine.myCPU.Registers[15];
-			
 			RefreshRegisterList();
-			RefreshDisasmList();
+			UpdateDisassembly();
 		}
 		
-		void VScrollBar1Scroll(object sender, ScrollEventArgs e)
+		private void VScrollBar1Scroll(object sender, ScrollEventArgs e)
 		{
 			switch (e.Type)
             {
@@ -111,7 +152,7 @@ namespace pGBA
                     curPC -= 0x100;
                     break;
                 case ScrollEventType.ThumbTrack:
-                    curPC = (uint)e.NewValue;
+                    //curPC = (uint)e.NewValue;
                     break;
             }
 			
@@ -119,29 +160,28 @@ namespace pGBA
 			RefreshDisasmList();
 		}
 		
-		void CloseBtnClick(object sender, EventArgs e)
+		private void CloseBtnClick(object sender, EventArgs e)
 		{
 			this.Close();
 		}
 		
-		void refreshBtnClick(object sender, EventArgs e)
+		private void refreshBtnClick(object sender, EventArgs e)
 		{
-			curPC = myEngine.myCPU.Registers[15];
-			
 			RefreshRegisterList();
-			RefreshDisasmList();
+			UpdateDisassembly();
 		}
 		
-		void NextBtnClick(object sender, EventArgs e)
-		{			
-			myEngine.myCPU.Step();
-			
-			curPC = myEngine.myCPU.Registers[15];	
-			RefreshRegisterList();
-			RefreshDisasmList();
+		private void NextBtnClick(object sender, EventArgs e)
+		{	
+			if(myEngine.myMemory.romLoaded)
+			{
+				myEngine.myCPU.Step();
+				RefreshRegisterList();
+				UpdateDisassembly();
+			}
 		}
 		
-		void regListDoubleClick(object sender, EventArgs e)
+		private void regListDoubleClick(object sender, EventArgs e)
 		{
 			int itemSelected=regList.SelectedIndex;
 			string itemText=Convert.ToString(myEngine.myCPU.Registers[itemSelected],16).PadLeft(8,'0');
@@ -157,7 +197,7 @@ namespace pGBA
 			
 		}
 		
-		void regListClick(object sender, EventArgs e)
+		private void regListClick(object sender, EventArgs e)
 		{
 			editRegister.Visible=false;	
 		}

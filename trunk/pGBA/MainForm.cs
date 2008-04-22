@@ -40,14 +40,14 @@ namespace pGBA
 		void MainFormLoad(object sender, EventArgs e)
 		{
 			int i=0;
-			Scrn = new Bitmap(240, 160, PixelFormat.Format32bppRgb);
+			Scrn = new Bitmap(240, 160, PixelFormat.Format16bppRgb555);
 			while(i++!=239) Scrn.SetPixel(i,0,Color.FromArgb(0,255,0));
 			i=0;
 			while(i++!=239) Scrn.SetPixel(i,159,Color.FromArgb(255,0,255));
 			i=0;
 			while(i++!=159) Scrn.SetPixel(0,i,Color.FromArgb(255,255,255));
 			i=0;
-			while(i++!=159) Scrn.SetPixel(239,i,Color.FromArgb(255,0,0));
+			while(i++!=159) Scrn.SetPixel(239,i,Color.FromArgb(0,255,255));
 			scrnBox.Image = Scrn;
 		}
 		
