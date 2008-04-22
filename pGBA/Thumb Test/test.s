@@ -5,7 +5,7 @@
 @Opcode Test Rom
 
 @Section 1
-lsl	r0,r1,#2
+lsl r0,r1,#2
 lsr r0,r2,#1
 asr r2,r1,#5
 
@@ -39,5 +39,11 @@ mul r0,r1
 bic r0,r1
 mvn r0,r1
 
+@Section 5
+@add r0,r1
+@cmp r0,r1
+@mov r0,r1
+nop
+bx r1
 
 .end
