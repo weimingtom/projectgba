@@ -88,5 +88,14 @@ namespace pGBA
 		{
 			MessageBox.Show("pGBA v0.1 alpha \n(C) Normmatt 2008","About");
 		}
+		
+		void MemoryEditorToolStripMenuItemClick(object sender, EventArgs e)
+		{
+			MemoryEditor form;
+			
+			form = new MemoryEditor(myEngine);
+			
+			form.Show();
+		}
 	}
 }

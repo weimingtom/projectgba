@@ -70,10 +70,13 @@ namespace pGBA
 			
 			//Default to thumb mode atleast for now
 			//Registers[16] = 0x0000001F;
-			Registers[16] = 0x00000003F;
-			
+			Registers[16] = 0x00000003F;				
+		}
+		
+		public void Begin()
+		{
 			myThumb.Begin();
-				
+			//myArm.Begin();
 		}
 		
 		public void Emulate(uint cpu_cycles)
@@ -81,7 +84,7 @@ namespace pGBA
 			cycles = cpu_cycles;
 			while(cycles > 0)
 			{
-				//if(Registers[16] & 0x20) //Thumb State
+				//if(Registers[16] & T_MASK) //Thumb State
 					cycles -= myThumb.Emulate();
 				//else
 					//cycles -= myArm.Emulator();
@@ -92,10 +95,10 @@ namespace pGBA
 		{
 			cycles = 20;
 			
-			//if(Registers[16] & 0x20) //Thumb State
-				myThumb.Emulate();
+			//if(Registers[16] & T_MASK) //Thumb State
+				cycles -= myThumb.Emulate();
 			//else
-				//myArm.Emulator();
+				//cycles -= myArm.Emulator();
 		}
 	}
 }

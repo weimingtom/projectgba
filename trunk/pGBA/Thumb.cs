@@ -29,9 +29,7 @@ namespace pGBA
         private const int COND_GE = 10;	    // N equals V
         private const int COND_LT = 11;	    // N not equal to V
         private const int COND_GT = 12; 	// Z clear AND (N equals V)
-        private const int COND_LE = 13; 	// Z set OR (N not equal to V)
-        private const int COND_AL = 14; 	// Always
-        private const int COND_NV = 15; 	// Never execute
+        private const int COND_LE = 13; 	// Z set OR (N<>V)
 
         private const int OP_AND = 0x0;
         private const int OP_EOR = 0x1;
@@ -911,14 +909,241 @@ namespace pGBA
 			cycles = 1;
 		}
 		#endregion
-		//Section 12 Starts here
-		//Section 13 Starts here
-		//Section 14 Starts here
-		//Section 15 Starts here
-		//Section 16 Starts here
-		//Section 17 Starts here
-		//Section 18 Starts here
-		//Section 19 Starts here
+
+		//Might be buggy needs testing
+		#region Section 13
+		void thumb_add_sp_imm()
+		{
+			//add  sp,#immed
+			uint immed = (uint)((opcode& 0x7F) * 4);
+			
+			registers[13] += immed;
+			
+			cycles = 1;
+		}
+		
+		void thumb_sub_sp_imm()
+		{
+			//add  sp,#-immed
+			uint immed = (uint)((opcode& 0x7F) * 4);
+			
+			registers[13] -= immed;
+			
+			cycles = 1;
+		}
+		#endregion
+		
+		//Might be buggy needs testing (timing needs fixed)
+		#region Section 14
+		void thumb_push()
+		{
+			//push {Rlist}
+			
+			if(((opcode >> 8)&1) == 1)
+			{
+				registers[13] -= 4;
+            	myEngine.myMemory.WriteWord(registers[13], registers[14]);
+			}
+			
+			for (int i = 7; i >= 0; i--)
+            {
+                if (((opcode >> i) & 1) == 1)
+                {
+                    registers[13] -= 4;
+                    myEngine.myMemory.WriteWord(registers[13], registers[i]);
+                }
+            }
+			
+			cycles = 1;
+		}
+		
+		void thumb_pop()
+		{
+			//pop {Rlist}
+			uint immed = (uint)((opcode& 0x7F) * 4);
+			
+			for (int i = 0; i < 8; i++)
+            {
+                if (((opcode >> i) & 1) == 1)
+                {
+                    registers[i] = myEngine.myMemory.ReadWord(registers[13]);
+                    registers[13] += 4;
+                }
+            }
+			
+			if(((opcode >> 8)&1) == 1)
+			{
+				registers[15] = myEngine.myMemory.ReadWord(registers[13]) & (~1U);
+            	registers[13] += 4;
+            	this.FlushQueue();
+			}
+			
+			cycles = 1;
+		}
+		#endregion
+		
+		//Might be buggy needs testing (timing needs fixed)
+		#region Section 15
+		void thumb_stmia()
+		{
+			//stmia rb!, {Rlist}
+			int rb = ((opcode>>8) & 0x07);
+			
+			for (int i = 0; i < 8; i++)
+            {
+                if (((opcode >> i) & 1) == 1)
+                {
+                    myEngine.myMemory.WriteWord(registers[rb] & (~3U), registers[i]);
+                    registers[rb] += 4;
+                }
+            }
+			
+			cycles = 3;
+		}
+		
+		void thumb_ldmia()
+		{
+			//ldmia rb!, {Rlist}
+			int rb = ((opcode>>8) & 0x07);
+			uint adr = registers[rb];
+			
+			for (int i = 0; i < 8; i++)
+            {
+                if (((opcode >> i) & 1) == 1)
+                {
+                    registers[i] = myEngine.myMemory.ReadWord(adr & (~3U));
+                    adr += 4;
+                }
+            }
+			
+			if (((opcode >> rb) & 1) == 0)
+            {
+                registers[rb] = adr;
+            }
+			
+			cycles = 3;
+		}
+		#endregion
+		
+		//Might be buggy needs testing (timing needs fixed)
+		#region Section 16
+		void thumb_bxx()
+		{
+			uint cond = 0;
+            switch ((opcode >> 8) & 0xF)
+            {
+            	case COND_EQ:
+            		cond = zero;
+            		break;
+            	case COND_NE:
+            		cond = 1 - zero;
+            		break;
+            	case COND_CS:
+            		cond = carry;
+            		break;
+            	case COND_CC:
+            		cond = 1 - carry;
+            		break;
+            	case COND_MI:
+            		cond = negative;
+            		break;
+            	case COND_PL:
+            		cond = 1 - negative;
+            		break;
+            	case COND_VS:
+            		cond = overflow;
+            		break;
+            	case COND_VC:
+            		cond = 1 - overflow;
+            		break;
+            	case COND_HI:
+            		cond = carry & (1 - zero);
+            		break;
+            	case COND_LS:
+            		cond = (1 - carry) | zero;
+            		break;
+            	case COND_GE:
+            		cond = (1 - negative) ^ overflow;
+            		break;
+            	case COND_LT:
+            		cond = negative ^ overflow;
+            		break;
+            	case COND_GT: 
+            		cond = (1 - zero) & (negative ^ (1 - overflow)); 
+            		break;
+                case COND_LE: 
+            		cond = (negative ^ overflow) | zero; 
+            		break;
+            }
+            
+            if (cond == 1)
+            {
+                uint offset = (uint)(opcode & 0xFF);
+                if ((offset & (1 << 7)) != 0) offset |= 0xFFFFFF00;
+
+                registers[15] += offset << 1;        
+
+                FlushQueue();
+                
+                cycles = 3;
+            }
+            
+            cycles = 1;
+		}
+		#endregion
+		
+		//Not done yet
+		#region Section 17
+		void thumb_swi()
+		{
+			uint swi = (uint)(opcode & 0xFF);
+		 	
+			//Not done yet
+		 	
+		 	cycles = 3;
+		}
+		#endregion
+		
+		//Might be buggy needs testing
+		#region Section 18
+		void thumb_b()
+		{
+			uint offset = (uint)(opcode & 0x7FF);
+            if ((offset & (1 << 10)) != 0) offset |= 0xFFFFF800;
+
+            registers[15] += offset << 1;
+
+            FlushQueue();
+            
+            cycles = 3;
+		}
+		#endregion
+		
+		#region Section 19
+		void thumb_bl1()
+		{
+			uint offset = (uint)(opcode & 0x7FF);
+            if ((offset & (1 << 10)) != 0) offset |= 0xFFFFF800;
+
+            registers[14] = registers[15] + (offset << 12);
+            
+            cycles = 1;
+		}
+		
+		void thumb_bl2()
+		{
+			uint tmp = registers[15];
+			uint offset = (uint)(opcode & 0x7FF);
+			
+            registers[15] = registers[14] + (offset << 1);
+            registers[14] = (tmp - 2U) | 1;
+
+            FlushQueue();
+            
+            cycles = 3;
+		}
+		#endregion
+		
 		#endregion
 		
 		#region Flag Handling
@@ -1080,98 +1305,112 @@ namespace pGBA
 			case 0x0A:	/*01010*/
 			case 0x0B:	/*01011*/
 				switch(opcode_9_3){
-				case 0x0:	/*000 LB0*/
+				case 0x0:	/*000*/
 					thumb_str();
 					break;
-				case 0x2:	/*010 LB0*/
+				case 0x2:	/*010*/
 					thumb_strb();
 					break;
-				case 0x4:	/*100 LB0*/
+				case 0x4:	/*100*/
 					thumb_ldr();
 					break;
-				case 0x6:	/*110 LB0*/
+				case 0x6:	/*110*/
 					thumb_ldrb();
 					break;
-				case 0x1:	/*000 HS0*/
+				case 0x1:	/*000*/
 					thumb_strh();
 					break;
-				case 0x3:	/*010 HS0*/
+				case 0x3:	/*010*/
 					thumb_ldsb();
 					break;
-				case 0x5:	/*100 HS0*/
+				case 0x5:	/*100*/
 					thumb_ldrh();
 					break;
-				case 0x7:	/*110 HS0*/
+				case 0x7:	/*110*/
 					thumb_ldsh();
 					break;
 				}
 				break;	
-			case 0x0C:	/*01100 - BL=00*/
-				thumb_str_imm();	/*str rd,[rb,#imm]*/
+			case 0x0C:	/*01100*/
+				thumb_str_imm();
 				break;
-			case 0x0D:	/*01101 - BL=01*/
-				thumb_ldr_imm();	/*ldr rd,[rb,#imm]*/
+			case 0x0D:	/*01101*/
+				thumb_ldr_imm();
 				break;
-			case 0x0E:	/*01110 - BL=10*/
-				thumb_strb_imm();/*strb rd,[rb,#imm]*/
+			case 0x0E:	/*01110*/
+				thumb_strb_imm();
 				break;
-			case 0x0F:	/*01111 - BL=11*/
-				thumb_ldrb_imm();/*ldrb rd,[rb,#imm]*/
+			case 0x0F:	/*01111*/
+				thumb_ldrb_imm();
 				break;
-			case 0x10:	/*10000 - L=0*/
-				thumb_strh_imm();/*strh rd,[rb,#imm]*/
+			case 0x10:	/*10000*/
+				thumb_strh_imm();
 				break;
-			case 0x11:	/*10001 - L=1*/
-				thumb_ldrh_imm();/*ldrh rd,[rb,#imm]*/
+			case 0x11:	/*10001*/
+				thumb_ldrh_imm();
 				break;
-			case 0x12:	/*10010 - S=0*/
-				thumb_str_sp();/*str rd,[SP,#imm]*/
+			case 0x12:	/*10010*/
+				thumb_str_sp();
 				break;
-			case 0x13:	/*10011 - S=1*/
-				thumb_ldr_sp();/*ldr rd,[SP,#imm]*/
+			case 0x13:	/*10011*/
+				thumb_ldr_sp();
 				break;
-			case 0x14:	/*10100 - S=0*//*add rd,PC,#imm*/
+			case 0x14:	/*10100*/
 				thumb_add_pc();
 				break;
-			case 0x15:	/*10101 - S=1*//*add rd,SP,#imm*/
+			case 0x15:	/*10101*/
 				thumb_add_sp();
 				break;
 			case 0x16:	/*10110*/
 			case 0x17:	/*10111*/
-				//if(BIT_N(opcode,10)){
-			/*PUSH/POP - 14*/
-				//	if(BIT_N(opcode,11)){	/*L*/
-				//		thumb_pop();/*POP {Rlist}*/
-				//	}else{
-				//		thumb_push();/*PUSH {Rlist}*/
-				//	}
-				//}else{
-				//	if(!((opcode >> 8) & 0x7)){	/*000S*/
-				//		thumb_add_sp();/*add SP,#+-imm*/
-				//	}
-				//	break;
-				//}
+				if(((opcode>>10)&1)==1)
+				{
+					if(((opcode>>11)&1)==1)
+					{
+						thumb_pop();
+					}
+					else
+					{
+						thumb_push();
+					}
+				}
+				else
+				{
+					if(((opcode >> 8) & 0x7)==0) /*000S*/
+					{
+						if(((opcode >> 7)&1) == 0)
+						{
+							thumb_add_sp_imm();
+						}
+						else
+						{
+							thumb_sub_sp_imm();
+						}
+					}
+				}
 				break;
 			case 0x18:	/*11000*/
-				//thumb_stmia();/*stmia rb!,{Rlist}*/
+				thumb_stmia();
 				break;
 			case 0x19:	/*11001*/
-				//thumb_ldmia();/*ldmia rb!,{Rlist}*/
+				thumb_ldmia();
 				break;
 			case 0x1A:	/*11010*/
 			case 0x1B:	/*11011*/
-				//if(((opcode >> 8) & 0xF) == 0xF){
-				//	thumb_swi();
-				//}else{
-				//	thumb_bxx();
-				//}
+				if(((opcode >> 8) & 0xF) == 0xF){
+					thumb_swi();
+				}else{
+					thumb_bxx();
+				}
 				break;
 			case 0x1C:	/*11100*/
-				//arm7tdmi_thumb_b();
+				thumb_b();
 				break;
 			case 0x1E:	/*11110*/
+				thumb_bl1();
+				break;
 			case 0x1F:	/*11111*/
-				//arm7tdmi_thumb_bl();
+				thumb_bl2();
 				break;
 			default:
 				cycles = 1;
