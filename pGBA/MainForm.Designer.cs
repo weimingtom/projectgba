@@ -48,6 +48,7 @@ namespace pGBA
 			this.statusStrip = new System.Windows.Forms.StatusStrip();
 			this.FPS_Indicator = new System.Windows.Forms.ToolStripStatusLabel();
 			this.openFileDialog = new System.Windows.Forms.OpenFileDialog();
+			this.memoryEditorToolStripMenuItem = new System.Windows.Forms.ToolStripMenuItem();
 			((System.ComponentModel.ISupportInitialize)(this.scrnBox)).BeginInit();
 			this.menuStrip.SuspendLayout();
 			this.statusStrip.SuspendLayout();
@@ -105,7 +106,8 @@ namespace pGBA
 			// toolsToolStripMenuItem
 			// 
 			this.toolsToolStripMenuItem.DropDownItems.AddRange(new System.Windows.Forms.ToolStripItem[] {
-									this.disassemblerToolStripMenuItem});
+									this.disassemblerToolStripMenuItem,
+									this.memoryEditorToolStripMenuItem});
 			this.toolsToolStripMenuItem.Name = "toolsToolStripMenuItem";
 			this.toolsToolStripMenuItem.Size = new System.Drawing.Size(44, 20);
 			this.toolsToolStripMenuItem.Text = "&Tools";
@@ -113,7 +115,7 @@ namespace pGBA
 			// disassemblerToolStripMenuItem
 			// 
 			this.disassemblerToolStripMenuItem.Name = "disassemblerToolStripMenuItem";
-			this.disassemblerToolStripMenuItem.Size = new System.Drawing.Size(136, 22);
+			this.disassemblerToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
 			this.disassemblerToolStripMenuItem.Text = "&Disassembler";
 			this.disassemblerToolStripMenuItem.Click += new System.EventHandler(this.DisassemblerToolStripMenuItemClick);
 			// 
@@ -144,6 +146,13 @@ namespace pGBA
 			// 
 			this.openFileDialog.Filter = "GBA Rom files (*.gba)|*.gba";
 			// 
+			// memoryEditorToolStripMenuItem
+			// 
+			this.memoryEditorToolStripMenuItem.Name = "memoryEditorToolStripMenuItem";
+			this.memoryEditorToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
+			this.memoryEditorToolStripMenuItem.Text = "&Memory Editor";
+			this.memoryEditorToolStripMenuItem.Click += new System.EventHandler(this.MemoryEditorToolStripMenuItemClick);
+			// 
 			// MainForm
 			// 
 			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -166,6 +175,7 @@ namespace pGBA
 			this.ResumeLayout(false);
 			this.PerformLayout();
 		}
+		private System.Windows.Forms.ToolStripMenuItem memoryEditorToolStripMenuItem;
 		private System.Windows.Forms.ToolStripMenuItem disassemblerToolStripMenuItem;
 		private System.Windows.Forms.ToolStripMenuItem toolsToolStripMenuItem;
 		private System.Windows.Forms.OpenFileDialog openFileDialog;
