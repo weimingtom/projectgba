@@ -1,4 +1,4 @@
-#Gba Emulator by Normmatt
+Gba Emulator by Normmatt
 
 = Introduction =
 
