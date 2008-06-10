@@ -1,7 +1,7 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 9.00
-# Visual Studio 2005
-# SharpDevelop 2.2.1.2648
+Microsoft Visual Studio Solution File, Format Version 10.00
+# Visual Studio 2008
+# SharpDevelop 3.0.0.2970
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "pGBA", "pGBA.csproj", "{338F49E6-722D-454F-B21A-1CE4BE532360}"
 EndProject
 Global
@@ -10,9 +10,12 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{338F49E6-722D-454F-B21A-1CE4BE532360}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{338F49E6-722D-454F-B21A-1CE4BE532360}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{338F49E6-722D-454F-B21A-1CE4BE532360}.Release|Any CPU.Build.0 = Release|Any CPU
+		{338F49E6-722D-454F-B21A-1CE4BE532360}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{338F49E6-722D-454F-B21A-1CE4BE532360}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{338F49E6-722D-454F-B21A-1CE4BE532360}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
 	EndGlobalSection
 EndGlobal

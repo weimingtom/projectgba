@@ -1,4 +1,4 @@
-﻿<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+﻿<Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="3.5">
   <PropertyGroup>
     <ProjectGuid>{338F49E6-722D-454F-B21A-1CE4BE532360}</ProjectGuid>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
@@ -10,6 +10,28 @@
     <NoStdLib>False</NoStdLib>
     <WarningLevel>4</WarningLevel>
     <TreatWarningsAsErrors>false</TreatWarningsAsErrors>
+    <FileUpgradeFlags>
+    </FileUpgradeFlags>
+    <UpgradeBackupLocation>
+    </UpgradeBackupLocation>
+    <OldToolsVersion>2.0</OldToolsVersion>
+    <PublishUrl>publish\</PublishUrl>
+    <Install>true</Install>
+    <InstallFrom>Disk</InstallFrom>
+    <UpdateEnabled>false</UpdateEnabled>
+    <UpdateMode>Foreground</UpdateMode>
+    <UpdateInterval>7</UpdateInterval>
+    <UpdateIntervalUnits>Days</UpdateIntervalUnits>
+    <UpdatePeriodically>false</UpdatePeriodically>
+    <UpdateRequired>false</UpdateRequired>
+    <MapFileExtensions>true</MapFileExtensions>
+    <ApplicationRevision>0</ApplicationRevision>
+    <ApplicationVersion>1.0.0.%2a</ApplicationVersion>
+    <IsWebBootstrapper>false</IsWebBootstrapper>
+    <UseApplicationTrust>false</UseApplicationTrust>
+    <BootstrapperEnabled>true</BootstrapperEnabled>
+    <TargetFrameworkVersion>v3.5</TargetFrameworkVersion>
+    <RunCodeAnalysis>False</RunCodeAnalysis>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <OutputPath>bin\Debug\</OutputPath>
@@ -43,33 +65,65 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Armcpu.cs" />
-    <Compile Include="AssemblyInfo.cs" />
-    <Compile Include="Disassembler.cs" />
-    <Compile Include="DisassemblerForm.cs" />
-    <Compile Include="DisassemblerForm.Designer.cs">
+    <Compile Include="Core\Arm.cs" />
+    <Compile Include="Core\Armcpu.cs" />
+    <Compile Include="GUI\AssemblyInfo.cs" />
+    <Compile Include="Core\Disassembler.cs" />
+    <Compile Include="GUI\DisassemblerForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\DisassemblerForm.Designer.cs">
       <DependentUpon>DisassemblerForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="Engine.cs" />
-    <Compile Include="MainForm.cs" />
-    <Compile Include="MainForm.Designer.cs">
+    <Compile Include="Core\Engine.cs" />
+    <Compile Include="GUI\Logging.cs" />
+    <Compile Include="GUI\LogWindow.cs" />
+    <Compile Include="GUI\LogWindow.Designer.cs">
+      <DependentUpon>LogWindow.cs</DependentUpon>
+    </Compile>
+    <Compile Include="GUI\MainForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\MainForm.Designer.cs">
       <DependentUpon>MainForm.cs</DependentUpon>
     </Compile>
-    <Compile Include="Memory.cs" />
-    <Compile Include="MemoryEditor.cs" />
-    <Compile Include="MemoryEditor.Designer.cs">
+    <Compile Include="Core\Memory.cs" />
+    <Compile Include="GUI\MemoryEditor.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GUI\MemoryEditor.Designer.cs">
       <DependentUpon>MemoryEditor.cs</DependentUpon>
     </Compile>
-    <Compile Include="Program.cs" />
-    <Compile Include="Thumb.cs" />
-    <EmbeddedResource Include="DisassemblerForm.resx">
+    <Compile Include="GUI\Program.cs" />
+    <Compile Include="Core\Thumb.cs" />
+    <EmbeddedResource Include="GUI\DisassemblerForm.resx">
       <DependentUpon>DisassemblerForm.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="MainForm.resx">
+    <EmbeddedResource Include="GUI\LogWindow.resx">
+      <DependentUpon>LogWindow.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="GUI\MainForm.resx">
       <DependentUpon>MainForm.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="MemoryEditor.resx">
+    <EmbeddedResource Include="GUI\MemoryEditor.resx">
       <DependentUpon>MemoryEditor.cs</DependentUpon>
     </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.2.0">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 2.0 %28x86%29</ProductName>
+      <Install>true</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.0">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.0 %28x86%29</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
+    <BootstrapperPackage Include="Microsoft.Net.Framework.3.5">
+      <Visible>False</Visible>
+      <ProductName>.NET Framework 3.5</ProductName>
+      <Install>false</Install>
+    </BootstrapperPackage>
   </ItemGroup>
 </Project>
