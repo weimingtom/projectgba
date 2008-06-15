@@ -274,18 +274,18 @@ namespace pGBA
 					str += String.Format("swi #0x{0:X}", (opcode & 0xFF));
 				}else{
 					offset = (uint)(opcode & 0xFF);
-                	if ((offset & 0x80) == 1) offset |= 0xFFFFFF00;
+                	if ((offset & 0x80) != 0) offset |= 0xFFFFFF00;
                     str += String.Format("b{0} #0x{1:X8}", opCond[(opcode >> 8) & 0xF], adr + 4U + (offset << 1));
 				}
 				break;
 			case 0x1C:	/*11100*/
 				offset = (uint)(opcode & 0x7FF);
-                if ((offset & (1 << 10)) == 1) offset |= 0xFFFFF800;
+                if ((offset & (1 << 10)) != 0) offset |= 0xFFFFF800;
                 str += String.Format("b #0x{0:X8}", adr + 4U + (offset << 1));
 				break;
 			case 0x1E:	/*11110*/
 				offset = (uint)(opcode & 0x7FF);
-                if ((offset & (1 << 10)) == 1) offset |= 0xFFFFF800;
+                if ((offset & (1 << 10)) != 0) offset |= 0xFFFFF800;
                 offset = (uint)(offset << 12) | (uint)((myEngine.myMemory.ReadShort(adr + 2U) & 0x7FF) << 1);
                 str += String.Format("bl #0x{0:X8}", adr + 4U + offset);
 				break;

@@ -16,6 +16,22 @@ namespace pGBA
 	/// </summary>
 	public class Armcpu
 	{	      
+		//CPU Conditions
+		public const int COND_EQ = 0;	    // Z set
+        public const int COND_NE = 1;	    // Z clear
+        public const int COND_CS = 2;	    // C set
+        public const int COND_CC = 3;	    // C clear
+        public const int COND_MI = 4;	    // N set
+        public const int COND_PL = 5;	    // N clear
+        public const int COND_VS = 6;	    // V set
+        public const int COND_VC = 7;	    // V clear
+        public const int COND_HI = 8;	    // C set and Z clear
+        public const int COND_LS = 9;	    // C clear or Z set
+        public const int COND_GE = 10;	    // N equals V
+        public const int COND_LT = 11;	    // N not equal to V
+        public const int COND_GT = 12; 	// Z clear AND (N equals V)
+        public const int COND_LE = 13; 	// Z set OR (N<>V)
+        
         // CPU mode definitions
         public const uint USR = 0x10;
         public const uint FIQ = 0x11;
@@ -87,10 +103,9 @@ namespace pGBA
 			Registers[13] = 0x03007F00;
 			Registers[15] = 0x08000000;
 			
-			//Default to thumb mode atleast for now
-			//Registers[16] = 0x0000001F;
-			//Cheating
-			Registers[16] = 0x00000003F;	
+			Registers[16] = 0x0000001F;
+			//Default to thumb mode (Cheating)
+			//Registers[16] = 0x00000003F;	
 			
 			Begin();
 		}

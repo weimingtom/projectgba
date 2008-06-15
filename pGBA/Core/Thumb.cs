@@ -16,22 +16,7 @@ namespace pGBA
 	/// Description of Thumb.
 	/// </summary>
 	public class Thumb
-	{
-		private const int COND_EQ = 0;	    // Z set
-        private const int COND_NE = 1;	    // Z clear
-        private const int COND_CS = 2;	    // C set
-        private const int COND_CC = 3;	    // C clear
-        private const int COND_MI = 4;	    // N set
-        private const int COND_PL = 5;	    // N clear
-        private const int COND_VS = 6;	    // V set
-        private const int COND_VC = 7;	    // V clear
-        private const int COND_HI = 8;	    // C set and Z clear
-        private const int COND_LS = 9;	    // C clear or Z set
-        private const int COND_GE = 10;	    // N equals V
-        private const int COND_LT = 11;	    // N not equal to V
-        private const int COND_GT = 12; 	// Z clear AND (N equals V)
-        private const int COND_LE = 13; 	// Z set OR (N<>V)
-        
+	{        
 		private Engine myEngine;
 		private ushort	opcode, opcodeQueue, cycles;
 		private uint zero, carry, negative, overflow;
@@ -1016,46 +1001,46 @@ namespace pGBA
 			uint cond = 0;
             switch ((opcode >> 8) & 0xF)
             {
-            	case COND_EQ:
+            	case Armcpu.COND_EQ:
             		cond = zero;
             		break;
-            	case COND_NE:
+            	case Armcpu.COND_NE:
             		cond = 1 - zero;
             		break;
-            	case COND_CS:
+            	case Armcpu.COND_CS:
             		cond = carry;
             		break;
-            	case COND_CC:
+            	case Armcpu.COND_CC:
             		cond = 1 - carry;
             		break;
-            	case COND_MI:
+            	case Armcpu.COND_MI:
             		cond = negative;
             		break;
-            	case COND_PL:
+            	case Armcpu.COND_PL:
             		cond = 1 - negative;
             		break;
-            	case COND_VS:
+            	case Armcpu.COND_VS:
             		cond = overflow;
             		break;
-            	case COND_VC:
+            	case Armcpu.COND_VC:
             		cond = 1 - overflow;
             		break;
-            	case COND_HI:
+            	case Armcpu.COND_HI:
             		cond = carry & (1 - zero);
             		break;
-            	case COND_LS:
+            	case Armcpu.COND_LS:
             		cond = (1 - carry) | zero;
             		break;
-            	case COND_GE:
+            	case Armcpu.COND_GE:
             		cond = (1 - negative) ^ overflow;
             		break;
-            	case COND_LT:
+            	case Armcpu.COND_LT:
             		cond = negative ^ overflow;
             		break;
-            	case COND_GT: 
+            	case Armcpu.COND_GT: 
             		cond = (1 - zero) & (negative ^ (1 - overflow)); 
             		break;
-                case COND_LE: 
+                case Armcpu.COND_LE: 
             		cond = (negative ^ overflow) | zero; 
             		break;
             }
@@ -1166,7 +1151,7 @@ namespace pGBA
         	registers = myEngine.myCPU.Registers;
         	
         	//Should never be done
-        	FlushQueue();
+        	//FlushQueue();
         }
 		
 		public uint Emulate()
