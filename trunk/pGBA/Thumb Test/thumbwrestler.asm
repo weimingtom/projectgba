@@ -26,6 +26,11 @@
 	1:
 .endm
 
+.macro RUN_TEST val
+	mov		r1,\val
+	bl 	_runtest
+.endm
+
 
 _tmbmain:
 	mov 	r0,#0
@@ -45,11 +50,12 @@ _forever:
 	@mov 	r7,#16
 	@mov 	r5,#1
 	
-	ldr 	r0,=0
-	ldr 	r1,[r0]
-	bl 	_runtest
+	RUN_TEST #0
+	RUN_TEST #1
+	RUN_TEST #2
 	
-	b 	_forever
+forever:
+	b 	forever
 	
 .align
 .pool
@@ -354,10 +360,18 @@ _test0:
 
 	
 _test1:
+	@New Line in log
+	ldr 	r0,=_szNL
+	bl 	_drawtext
+	
 	ldr 	r0,=_szLDR1
 	mov 	r1,#64
 	mov 	r2,#1
 	mov 	r3,#4
+	bl 	_drawtext
+	
+	@New Line in log
+	ldr 	r0,=_szNL
 	bl 	_drawtext
 	
 	@ LDR Rd,[Rb,#imm]
@@ -387,6 +401,10 @@ _test1:
 
 
 _test2:
+	@New Line in log
+	ldr 	r0,=_szNL
+	bl 	_drawtext
+	
 	ldr 	r0,=_szLDM1
 	mov 	r1,#72
 	mov 	r2,#1
