@@ -129,6 +129,22 @@ _test0:
 	ldr 	r0,=_szADD
 	bl 	_drawresult
 	add 	r7,#8
+	
+	@ AND
+	mov 	r6,#0
+
+	ldr 	r0,=0x12345678
+	ldr 	r1,=0x000000FF
+	BKPT
+	and		r0,r1
+	bpl 	_and_ok_1
+	lsl 	r4,r5,#1
+	orr 	r6,r4
+	_and_ok_1:
+	TEST_Rd r0,#0x78	
+	ldr 	r0,=_szAND
+	bl 	_drawresult
+	add 	r7,#8
 
 
 	@ ASR
@@ -395,6 +411,60 @@ _test1:
 	bl 	_drawresult	
 	add 	r7,#8
 	
+	@ LDRB Rd,[Rb,Ro]
+	mov 	r6,#0
+	ldr 	r0,=romvar2
+	ldr 	r2,=0x8f
+	mov 	r3,#1
+	ldrb 	r1,[r0,r3]
+	TEST_Rd r1,r2
+	ldr 	r0,=_szLDRB
+	bl 	_drawresult	
+	add 	r7,#8
+	
+	@ LDRH Rd,[Rb,Ro]
+	mov 	r6,#0
+	ldr 	r0,=romvar2
+	ldr 	r2,=0x8f00
+	mov 	r3,#0
+	ldrh 	r1,[r0,r3]
+	TEST_Rd r1,r2
+	ldr 	r0,=_szLDRH1
+	bl 	_drawresult	
+	add 	r7,#8
+	
+	@ LDRH Rd,[Rb,#nn]
+	mov 	r6,#0
+	ldr 	r0,=romvar2
+	ldr 	r2,=0x8f00
+	ldrh 	r1,[r0,#0]
+	TEST_Rd r1,r2
+	ldr 	r0,=_szLDRH2
+	bl 	_drawresult	
+	add 	r7,#8
+	
+	@ LDRSH Rd,[Rb,Ro]
+	mov 	r6,#0
+	ldr 	r0,=romvar2
+	ldr 	r2,=0xFFFF8F00
+	mov 	r3,#0
+	ldsh 	r1,[r0,r3]
+	TEST_Rd r1,r2
+	ldr 	r0,=_szLDRSH
+	bl 	_drawresult
+	add 	r7,#8
+	
+	@ LDRSB Rd,[Rb,Ro]
+	mov 	r6,#0
+	ldr 	r0,=romvar2
+	ldr 	r2,=0xFFFFFF8F
+	mov 	r3,#1
+	ldsb 	r1,[r0,r3]
+	TEST_Rd r1,r2
+	ldr 	r0,=_szLDRSB
+	bl 	_drawresult	
+	add 	r7,#8
+	
 	pop 	{pc}
 .pool
 .align 1
@@ -410,6 +480,67 @@ _test2:
 	mov 	r2,#1
 	mov 	r3,#4
 	bl 	_drawtext
+	
+	@New Line in log
+	ldr 	r0,=_szNL
+	bl 	_drawtext
+	
+	@ LDMIA Rb!,{Rlist}
+	mov 	r6,#0 @clear flags
+	mov 	r1,#0
+	ldr 	r3,=_var64
+	sub 	r3,r3,#4
+	ldmia 	r3!,{r1,r2}
+	ldr 	r0,=_var64+4
+	cmp 	r3,r0
+	beq		_ldm_r2_r0
+	b		_ldm_done
+	
+	_ldm_r2_r0:
+	ldr 	r0,=_var64
+	ldr		r0,[r0]
+	cmp 	r1,r0
+	beq		_ldm_r1_r0
+	b		_ldm_done
+	
+	_ldm_r1_r0:
+	ldr 	r0,=_var64+4
+	ldr		r0,[r0]
+	cmp 	r2,r0
+	
+	_ldm_done:
+	ldr 	r0,=_szLDMIA
+	bl 	_drawresult	
+	add 	r7,#8
+	
+	@ STMIA Rb!,{Rlist}
+	mov 	r6,#0 @clear flags
+	ldr 	r1,=0x44332211
+	ldr 	r2,=0x88776655
+	ldr 	r3,=_tvar64
+	sub 	r3,r3,#4
+	stmia 	r3!,{r1,r2}
+	ldr 	r0,=_tvar64+4
+	cmp 	r3,r0
+	beq		_stm_r2_r0
+	b		_stm_done
+	
+	_stm_r2_r0:
+	ldr 	r0,=_tvar64
+	ldr		r0,[r0]
+	cmp 	r1,r0
+	beq		_stm_r1_r0
+	b		_stm_done
+	
+	_stm_r1_r0:
+	ldr 	r0,=_tvar64+4
+	ldr		r0,[r0]
+	cmp 	r2,r0
+	
+	_stm_done:
+	ldr 	r0,=_szSTMIA
+	bl 	_drawresult	
+	add 	r7,#8
 	
 	pop 	{pc}	
 
@@ -526,7 +657,9 @@ _drawtext:
 .pool
 	
 
-
+.align 3
+_var64:		.word 0x11223344,0x55667788
+_tvar64:	.word 0x11223344,0x55667788
 
 .align 2
 _jumptable:	.word _test0,_test1,_test2
@@ -563,7 +696,17 @@ _szSUB:		.asciz "SUB"
 
 _szLDR:		.asciz "LDR"
 _szLDRH:	.asciz "LDRH"
+_szLDRH1:	.asciz "LDRH R"
+_szLDRH2:	.asciz "LDRH \\"
 _szLDRB:	.asciz "LDRB"
+_szLDRSH:	.asciz "LDRSH"
+_szLDRSB:	.asciz "LDRSB"
+_szLDM:		.asciz "LDM"
+_szLDMIA:	.asciz "LDMIA"
+_szSTR:		.asciz "STR"
+_szSTRH:	.asciz "STRH"
+_szSTRB:	.asciz "STRB"
+_szSTMIA:	.asciz "STMIA"
 
 _szOK:		.asciz "OK"
 _szBad:		.asciz "BAD"

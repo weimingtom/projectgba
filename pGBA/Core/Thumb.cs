@@ -18,7 +18,8 @@ namespace pGBA
 	public class Thumb
 	{        
 		private Engine myEngine;
-		private ushort	opcode, opcodeQueue, cycles;
+		private ushort	opcode, opcodeQueue;
+		private int cycles;
 		private uint zero, carry, negative, overflow;
 		private uint[] registers;
 		
@@ -518,7 +519,7 @@ namespace pGBA
 			
 			//Need to do mul cycle claculations here
 			//hard coded to 3 like in armv5 atleast for now
-			uint mulCycles = 3;
+			int mulCycles = 3;
 			
 			registers[rd] *= registers[rs];
 			
@@ -627,10 +628,13 @@ namespace pGBA
             // Check for branch back to Arm Mode
             if ((registers[16] & Armcpu.T_MASK) != Armcpu.T_MASK)
             {
-                return;
+                //Not sure if i need too do this i'll have to check sometime
+                registers[15] += 4;
             }
-
-            FlushQueue();
+            else
+            {
+            	FlushQueue();
+            }
             
 	        cycles = 3;
 		}
@@ -1154,7 +1158,7 @@ namespace pGBA
         	//FlushQueue();
         }
 		
-		public uint Emulate()
+		public int Emulate()
 		{
 			byte	opcode_11_5, opcode_6_5, opcode_9_3;
 			

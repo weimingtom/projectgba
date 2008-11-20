@@ -253,11 +253,11 @@ namespace pGBA
 					{
 						if(((opcode >> 7)&1) == 0)
 						{
-							str += String.Format("add sp,#0x{1:X2}", ((opcode & 0x7F) * 4));
+							str += String.Format("add sp,#0x{0:X}", ((opcode & 0x7F) * 4));
 						}
 						else
 						{
-							str += String.Format("add sp,#-0x{1:X2}", ((opcode & 0x7F) * 4));
+							str += String.Format("add sp,#-0x{0:X}", ((opcode & 0x7F) * 4));
 						}
 					}
 				}
@@ -303,6 +303,267 @@ namespace pGBA
 		#endregion
 		
 		#region Arm
+		
+		 #region Shift helpers
+        //SHIFT_ROR
+        public string imm_rotate(uint opcode)
+		{
+			uint	imm_val;
+			int 	shift;
+			string 	str = "";
+				
+			shift	= (int)(((opcode >> 8) & 0xF)*2);
+			imm_val	= opcode & 0xFF;
+            imm_val = (imm_val >> shift) | (imm_val << (32 - shift));
+
+            str = String.Format("#0x{0:X}",imm_val);
+            
+            return str;
+		}
+        
+        //Barrel Shifter
+        private const byte SHIFT_LSL = 0;
+        private const byte SHIFT_LSR = 1;
+        private const byte SHIFT_ASR = 2;
+        private const byte SHIFT_ROR = 3;
+        
+        public string imm_shift(uint opcode)
+		{
+			byte	shift_type;
+			int 	shift;
+			uint 	rm;
+			int 	valueSigned;
+			string 	str = "";
+				
+			rm = registers[opcode & 0x0F];
+			shift_type = (byte)((opcode >> 5) & 3);
+			
+			if((opcode & 0x08)!=0)
+			{
+				shift = (int)((opcode >> 8) & 0xF);
+				if (shift == 15)
+                {
+                    shift = (int)((registers[shift] + 0x4) & 0xFF);
+                }
+                else
+                {
+                    shift = (int)(registers[shift] & 0xFF);
+                }
+
+                if ((opcode & 0xF) == 15)
+                {
+                    rm += 4;
+                }
+			}
+			else
+			{
+				shift = (int)((opcode >> 7) & 0x1F);
+			}
+            
+			if(rm == 15) 
+			{
+				switch(shift_type)
+				{
+					case SHIFT_LSL:
+						rm = (rm << shift);
+						break;
+					case SHIFT_LSR:
+						if (shift!=0) 
+						{
+							rm = (rm >> shift);
+						} 
+						break;
+					case SHIFT_ASR:
+						if (shift!=0) 
+						{
+						//ASR #32 for c  = 0					//Get last bit shifted
+							valueSigned = (int)rm;			//Convert value to signed
+							rm = (uint)(valueSigned >> shift);
+						}
+						break;
+					case SHIFT_ROR:
+						if (shift!=0) 
+						{
+							//ROR
+							rm = (rm << (32 - shift)) | (rm >> shift);						
+						} 
+						else 
+						{		
+							//RRX		
+							//if (carry!=0) 
+							//{
+								rm = ((rm>>1)|0x80000000);
+							//} else {
+							//	rm = rm >> 1;
+							//}
+						}
+						break;
+				}
+				str = String.Format("#0x{0:d}",rm);
+			} 
+			else
+			{
+				if(shift>0)
+				{
+					switch(shift_type)
+					{
+						case 0:	/*00 = logical left(lsl) */
+							str = String.Format("r{0:d},lsl #{1:d}",opcode & 0x0F, shift);
+							break;
+						case 1:	/*01 = logical right(lsr) */
+							str = String.Format("r{0:d},lsr #{1:d}",opcode & 0x0F, shift);
+							break;
+						case 2:	/*10 = arithmetic right(asr) */
+							str = String.Format("r{0:d},asr #{1:d}",opcode & 0x0F, shift);
+							break;
+						case 3:	/*11 = rotate right(ror) */
+							str = String.Format("r{0:d},ror #{1:d}",opcode & 0x0F, shift);
+							break;
+					}
+				}
+				else
+				{
+					str = String.Format("r{0:d}",opcode & 0x0F);
+				}
+			}
+			
+            return str;
+		}
+        
+        private bool BIT_N(uint a, int b)
+		{
+			uint test = ((a>>b)&1);
+			return (bool)(test==1) ? true : false;
+		}
+        
+        #endregion
+		
+		private string arm_loadstore(uint opcode, bool load)
+		{
+			string str = null;
+			
+			uint rd = 0;
+        	uint rn = 0;
+        	uint offset = 0;
+        	uint address = 0;
+        	uint fimmed = 0;
+        	uint fpreindex = 0;
+        	uint faddbase = 0;
+        	uint fbyte = 0;
+        	uint fwriteback = 0;
+        	uint amount = 0;
+        	
+        	rd = (opcode >> 12) & 0x0F;
+        	rn = (opcode >> 16) & 0x0F;
+        	
+        	fimmed = 	((opcode >> 25) & 1);
+        	fpreindex = ((opcode >> 24) & 1);
+        	faddbase = 	((opcode >> 23) & 1);
+        	fbyte = 	((opcode >> 22) & 1);
+        	fwriteback =((opcode >> 21) & 1);
+        	
+        	address = registers[rn];
+        	
+        	if(rn==15) address += 4;
+			
+			if(load)
+			{
+				str += String.Format("ldr{0} ",opCond[opcode>>28]);
+			}
+			else
+			{
+				str += String.Format("str{0} ",opCond[opcode>>28]);
+			}
+			
+			str += String.Format("r{0:d}",rd);
+			
+			if(fimmed!=0)
+        	{
+				//offset = myEngine.myCPU.myArm.imm_shift(opcode);
+        	}
+        	else
+        	{
+				offset = opcode & 0xFFF;
+			}
+        	
+        	amount = address + offset;
+        	
+        	str += String.Format(", [#0x{0:X8}]",amount+8);
+			
+			
+		
+			return str;
+		}
+		
+		private string arm_dataproc(uint opcode)
+		{
+        	string operand = null;
+        	uint rd = 0;
+        	uint rn = 0;
+        	
+        	rd = (opcode >> 12) & 0x0F;
+        	rn = (opcode >> 16) & 0x0F;
+        		
+        	if(BIT_N(opcode,25)){	/*Immediate Operand*/
+				operand = imm_rotate(opcode);
+			}else{
+				operand = imm_shift(opcode);
+			}
+        	
+        	switch((byte)((opcode >> 21) & 0x0F)){
+				case 0x0: 
+        			/*and*/
+        			return String.Format("and{0}{1} r{2:d},r{3:d},{4}", opCond[(opcode >> 28) & 0xF], (((opcode>>20)&1)==1)?"s":"", rd, rn, operand);
+				case 0x1: 
+        			/*eor*/ 
+        			return String.Format("eor{0}{1} r{2:d},r{3:d},{4}", opCond[(opcode >> 28) & 0xF], (((opcode>>20)&1)==1)?"s":"", rd, rn, operand);
+				case 0x2: 
+        			/*sub*/
+        			return String.Format("sub{0}{1} r{2:d},r{3:d},{4}", opCond[(opcode >> 28) & 0xF], (((opcode>>20)&1)==1)?"s":"", rd, rn, operand);
+				case 0x3: 
+        			/*rsb*/ 
+        			return String.Format("rsb{0}{1} r{2:d},r{3:d},{4}", opCond[(opcode >> 28) & 0xF], (((opcode>>20)&1)==1)?"s":"", rd, rn, operand);
+				case 0x4: 
+        			/*add*/ 
+        			return String.Format("add{0}{1} r{2:d},r{3:d},{4}", opCond[(opcode >> 28) & 0xF], (((opcode>>20)&1)==1)?"s":"", rd, rn, operand);
+				case 0x5: 
+        			/*adc*/ 
+        			return String.Format("adc{0}{1} r{2:d},r{3:d},{4}", opCond[(opcode >> 28) & 0xF], (((opcode>>20)&1)==1)?"s":"", rd, rn, operand);
+				case 0x6: 
+        			/*sbc*/ 
+        			return String.Format("sbc{0}{1} r{2:d},r{3:d},{4}", opCond[(opcode >> 28) & 0xF], (((opcode>>20)&1)==1)?"s":"", rd, rn, operand);
+				case 0x7: 
+        			/*rsc*/ 
+        			return String.Format("rsc{0}{1} r{2:d},r{3:d},{4}", opCond[(opcode >> 28) & 0xF], (((opcode>>20)&1)==1)?"s":"", rd, rn, operand);
+				case 0x8: 
+        			/*tst*/ 
+        			return String.Format("tst{0} r{1:d},{2}", opCond[(opcode >> 28) & 0xF], rn, operand);
+				case 0x9: 
+        			/*teq*/ 
+        			return String.Format("teq{0} r{1:d},{2}", opCond[(opcode >> 28) & 0xF], rn, operand);
+				case 0xA: 
+        			/*cmp*/ 
+        			return String.Format("cmp{0} r{1:d},{2}", opCond[(opcode >> 28) & 0xF], rn, operand);
+				case 0xB: 
+        			/*cmn*/ 
+        			return String.Format("cmn{0} r{1:d},{2}", opCond[(opcode >> 28) & 0xF], rn, operand);
+				case 0xC: 
+        			/*orr*/
+        			return String.Format("orr{0} r{1:d},r{2:d},{3}", opCond[(opcode >> 28) & 0xF], rd, rn, operand);
+				case 0xD: 
+        			/*mov*/
+        			return String.Format("mov{0} r{1:d},{2}", opCond[(opcode >> 28) & 0xF], rd, operand);
+				case 0xE: 
+        			/*bic*/
+        			return String.Format("bic{0} r{1:d},r{2:d},{3}", opCond[(opcode >> 28) & 0xF], rd, rn, operand);
+				case 0xF: 
+        			/*mvn*/ 
+        			return String.Format("mvn{0} r{1:d},{2}", opCond[(opcode >> 28) & 0xF], rd, operand);
+			}
+        	
+        	return "error";
+		}
+		        
 		public string DisasmArm(uint adr)
 		{
 			string 	str;
@@ -320,6 +581,101 @@ namespace pGBA
 			
 			switch (opcode_24_4)
             {
+				case 0x1:	/*0001*/
+					if(((opcode >> 4) & 0xFF) == 0x09)
+					{	
+						/*00001001*/
+						/*Single Data Swap*/
+						str += String.Format("swp{0}{1} r{2:d},r{3:d},r{4:d}", opCond[(opcode >> 28) & 0xF], (((opcode>>22)&1)==1)?"b":"", ((opcode>>12)&0x0F), (opcode&0x0F), ((opcode>>16)&0x0F));
+						break;
+					}
+					if((opcode & 0x0FFFFFF0) == 0x012FFF10)
+					{
+						/*Branch and Exchange*/
+						str += String.Format("bx{0} r{1:d}", opCond[(opcode >> 28) & 0xF], (opcode&0x0F));
+						break;
+					}
+					if((opcode & 0x0FFF0000) == 0x016F0000)
+					{
+			        //  arm_clz();	/*Count Leading Zeros*/
+						break;
+			        }
+					if((opcode&0xFFF00000)==0xE1000000){
+		            	//arm_mrs();
+		            	str += "mrs";
+		            	break;
+		            }
+		            if((opcode&0xFFF00000)==0xE1200000){
+		            	//arm_msr();
+		            	str += "msr";
+		            	break;
+		            }
+					if(BIT_N(opcode,4))
+					{	
+						/*Halfword data Transfer:*/
+						if(BIT_N(opcode,22))
+						{	
+							/*immdiate offset*/
+							if(BIT_N(opcode,20))
+							{
+			            		/*Load from memory*/
+								//arm_ldrs_imm();
+							}
+			            	else
+			            	{					
+			            		/*Store to memory*/
+								//arm_strs_imm();
+							}
+							break;
+						}
+						else
+						{					
+							/*register offset*/
+							if(BIT_N(opcode,20))
+							{	
+								/*Load from memory*/
+								//arm_ldrs();
+							}
+							else
+							{					
+								/*Store to memory*/
+								//arm_strs();
+							}
+							break;
+						}
+					}
+					
+					/*Data Processing can be eitehr 0x1 or 0x3*/
+					str += arm_dataproc(opcode);
+					break;
+	            case 0x2:	/*0010*/
+				case 0x3:	/*0011*/
+					/*Data Processing can be eitehr 0x1 or 0x3*/
+					str += arm_dataproc(opcode);
+					break;
+				/*Single Data Transfer*/
+				case 0x4:	/*0100*/
+				case 0x5:	/*0101*/
+				case 0x6:	/*0110*/
+				case 0x7:	/*0111*/
+					if(((opcode>>20)&1)==1)
+					{	
+						/*Load from memory*/
+						str += arm_loadstore(opcode,true);
+						break;
+					}
+					else if(((opcode>>20)&1)==0)
+					{
+						/*Store to memory*/
+						str += arm_loadstore(opcode,false);
+						break;
+					}
+					if(((opcode>>4)&1)==1)
+					{
+						str += String.Format("UNDEFINED OPCODE!");
+						break;
+					}
+					break;
 				/*Branch*/
 				case 0xA:	/*1010*/
 					offset = opcode & 0x00FFFFFF;

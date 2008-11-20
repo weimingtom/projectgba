@@ -8,6 +8,7 @@
  */
 
 using System;
+using System.Text;
 using System.Drawing;
 using System.Windows.Forms;
 
@@ -19,8 +20,9 @@ namespace pGBA
     public class Arm
     {
         private Engine myEngine;
-        private uint opcode, opcodeQueue, cycles;
-        private uint zero, carry, negative, overflow;
+        private uint opcode, opcodeQueue;
+        private int cycles;
+        public uint zero, carry, negative, overflow;
         private uint[] registers;
         private uint shifterCarry;
 
@@ -39,7 +41,7 @@ namespace pGBA
         
         #region Shift helpers
         //SHIFT_ROR
-        uint imm_rotate(uint opcode)
+        public uint imm_rotate(uint opcode)
 		{
 			uint	imm_val;
 			int 	shift;
@@ -60,9 +62,223 @@ namespace pGBA
             
             return imm_val;
 		}
+        
+        //Barrel Shifter
+        private const byte SHIFT_LSL = 0;
+        private const byte SHIFT_LSR = 1;
+        private const byte SHIFT_ASR = 2;
+        private const byte SHIFT_ROR = 3;
+        
+        public uint imm_shift(uint opcode)
+		{
+			byte	shift_type;
+			int 	shift;
+			uint 	rm;
+			int 	valueSigned;
+				
+			rm = registers[opcode & 0x0F];
+			shift_type = (byte)((opcode >> 5) & 3);
+			
+			if((opcode & 0x08)!=0)
+			{
+				shift = (int)((opcode >> 8) & 0xF);
+				if (shift == 15)
+                {
+                    shift = (int)((registers[shift] + 0x4) & 0xFF);
+                }
+                else
+                {
+                    shift = (int)(registers[shift] & 0xFF);
+                }
+
+                if ((opcode & 0xF) == 15)
+                {
+                    rm += 4;
+                }
+			}
+			else
+			{
+				shift = (int)((opcode >> 7) & 0x1F);
+			}
+            
+			switch(shift_type)
+			{
+				case SHIFT_LSL:
+					if(((opcode>>25)&1)==1)
+					{
+						if((((rm << (shift - 1)) & 0x80000000) >> 31)!=0)
+						{
+							carry = 1; 
+						}
+						else
+						{
+							carry = 0;
+						}
+					}
+					rm = (rm << shift);
+					break;
+				case SHIFT_LSR:
+					if (shift!=0) 
+					{
+						if(((opcode>>25)&1)==1)
+						{
+							if(((rm >> (shift -1)) & 0x00000001)!=0)
+							{
+								carry = 1;
+							}
+							else
+							{
+								carry = 0;
+							}
+						}
+						rm = (rm >> shift);
+					} 
+					else
+					{
+						if(((opcode>>25)&1)==1)
+						{
+							if(((rm>>31)&1)==1)
+							{
+								carry = 1;  
+							}
+							else
+							{
+								carry = 0; 
+							}
+						}
+						rm = 0;
+					}
+					break;
+				case SHIFT_ASR:
+					if (shift!=0) {
+					//ASR #32 for c  = 0					//Get last bit shifted
+						if(((opcode>>25)&1)==1)
+						{
+							if(((rm >> (shift -1)) & 0x00000001)!=0)
+							{
+								carry = 1;
+							}
+							else
+							{
+								carry = 0;
+							}
+						}
+						valueSigned = (int)rm;			//Convert value to signed
+						rm = (uint)(valueSigned >> shift);
+					} else {
+						if(((opcode>>25)&1)==1)
+						{
+							if(((rm>>31)&1)==1)
+							{
+								carry = 1; 
+							}
+							else
+							{
+								carry = 0;
+							}
+						}
+						
+						if (carry!=0)
+						{
+							rm = 0xFFFFFFFF; 
+						}
+						else
+						{ 
+							rm = 0;
+						}
+					}
+					break;
+				case SHIFT_ROR:
+					if (shift!=0) 
+					{
+						//ROR
+						if(((opcode>>25)&1)==1)
+						{
+							if(((rm >> (shift -1)) & 0x00000001)!=0)
+							{
+								carry = 1;
+							}
+							else
+							{
+								carry = 0;
+							}
+						}
+						//value = _rotr (value, shiftAmt);
+						rm = (rm << (32 - shift)) | (rm >> shift);						
+					} 
+					else 
+					{		
+						//RRX		
+						if (carry!=0) 
+						{
+							if(((opcode>>25)&1)==1)
+							{
+								if((rm & 0x00000001)!=0)
+								{
+									carry = 1;
+								}
+								else
+								{
+									carry = 0;
+								}
+							}
+							rm = ((rm>>1)|0x80000000);
+						} else {
+							if(((opcode>>25)&1)==1)
+							{
+								if((rm & 0x00000001)!=0)
+								{
+									carry = 1;
+								}
+								else
+								{
+									carry = 0;
+								}
+							}
+							rm = rm >> 1;
+						}
+					}
+					break;
+			}
+			
+            return rm;
+		}
         #endregion
         
         #region Opcodes
+        
+        #region Section 3
+        void arm_bx()
+        {
+        	uint rn = opcode & 0x0F;
+        	
+        	if(rn==15) 
+        	{
+        		myEngine.myLog.WriteLog("BX addressing r15 is an undefined action.");
+        		myEngine.emulate = false;
+        	}
+
+        	registers[15] = registers[rn];
+        	
+        	if((registers[15]&1)!=0)
+        	{
+        		//Remove thumb bit
+        		registers[15] -= 1;
+        		
+        		//Set it to proper address
+        		registers[15] += 2;
+        		
+        		//Set cpu mode to thumb
+        		registers[16] |= 1 << Armcpu.T_BIT;
+        	}
+        	else
+        	{
+            	FlushQueue();
+        	}
+            
+            cycles = 3;
+        }
+        #endregion
         
         #region Section 4
         void arm_b()
@@ -91,26 +307,691 @@ namespace pGBA
         #endregion
         
         #region Section 5
-        void arm_mov()
+        
+        void arm_dataproc()
 		{
         	uint operand = 0;
         	uint rd = 0;
+        	uint rn = 0;
         	
-        	rd = ((opcode >> 12) & 0xF);
+        	rd = (opcode >> 12) & 0x0F;
+        	rn = (opcode >> 16) & 0x0F;
         		
-        	if((opcode>>25&1)==1){	/*Immediate Operand*/
+        	if(BIT_N(opcode,25)){	/*Immediate Operand*/
 				operand = imm_rotate(opcode);
 			}else{
-				;//operand = imm_shift(opcode);
+				operand = imm_shift(opcode);
 			}
+        	
+        	bool registerShift = (opcode & (1 << 4)) == (1 << 4);
+            if (rn == 15 && ((opcode >> 25) & 0x7) == 0 && registerShift)
+            {
+                rn = registers[rn] + 4;
+            }
+            else
+            {
+                rn = registers[rn];
+            }
+        	
+        	switch((byte)((opcode >> 21) & 0x0F)){
+				case 0x0: 
+        			/*and*/
+        			registers[rd] = rn & operand;
+        			set_dp_flags(registers[rd]);
+        			break;
+				case 0x1: 
+        			/*eor*/ 
+        			registers[rd] = rn ^ operand;
+        			set_dp_flags(registers[rd]);
+        			break;
+				case 0x2: 
+        			/*sub*/
+        			registers[rd] = rn - operand;
+        			set_sub_flag(rn, operand, registers[rd]);
+        			break;
+				case 0x3: 
+        			/*rsb*/ 
+        			registers[rd] = operand - rn;
+        			set_sub_flag(rn, operand, registers[rd]);
+        			break;
+				case 0x4: 
+        			/*add*/ 
+        			registers[rd] = rn + operand;
+        			set_add_flag(rn, operand, registers[rd]);
+        			break;
+				case 0x5: 
+        			/*adc*/ 
+        			registers[rd] = rn + operand + carry;
+        			set_add_flag(rn, operand, registers[rd]);
+        			break;
+				case 0x6: 
+        			/*sbc*/ 
+        			registers[rd] = rn - operand + carry - 1;
+        			set_sub_flag(rn, operand, registers[rd]);
+        			break;
+				case 0x7: 
+        			/*rsc*/ 
+        			registers[rd] = operand - rn + carry - 1;
+        			set_sub_flag(rn, operand, registers[rd]);
+        			break;
+				case 0x8: 
+        			/*tst*/ 
+        			set_dp_flags(rn & operand);
+        			break;
+				case 0x9: 
+        			/*teq*/ 
+        			set_dp_flags(rn ^ operand);
+        			break;
+				case 0xA: 
+        			/*cmp*/ 
+        			//set_dp_flags(rn - operand);
+        			set_sub_flag(rn, operand, rn - operand);
+        			break;
+				case 0xB: 
+        			/*cmn*/ 
+        			set_dp_flags(rn + operand);
+        			break;
+				case 0xC: 
+        			/*orr*/
+        			registers[rd] = rn | operand;
+        			set_dp_flags(registers[rd]);
+        			break;
+				case 0xD: 
+        			/*mov*/
+        			registers[rd] = operand;
+        			set_dp_flags(registers[rd]);
+        			break;
+				case 0xE: 
+        			/*bic*/
+        			registers[rd] = rn & ~operand;
+        			set_dp_flags(registers[rd]);
+        			break;
+				case 0xF: 
+        			/*mvn*/ 
+        			registers[rd] = 0xFFFFFFFF ^ operand;
+        			set_dp_flags(registers[rd]);
+        			break;
+			}
+            
+            if (rd == 15)
+            {
+            	// Prevent writing if no SPSR exists (this will be true for USER or SYSTEM mode)
+                //if (this.parent.SPSRExists) this.parent.WriteCpsr(this.parent.SPSR);
+                UnpackFlags();
 
-            registers[rd] = operand;
+                // Check for branch back to Thumb Mode
+                if ((registers[16] & Armcpu.T_MASK) == Armcpu.T_MASK)
+                {
+                        return;
+                }
 
-            negative = registers[rd] >> 31;
-            zero = registers[rd] == 0 ? 1U : 0U;
-            carry = shifterCarry;
+                // Otherwise, flush the instruction queue
+                FlushQueue();
+            }
             
             cycles = 1;
+		}
+        #endregion
+        
+        #region Section 6
+        void arm_mrs()
+		{
+			uint rd = 0;
+			
+			rd = (opcode >> 12) & 0x0F;
+		
+			if(BIT_N(opcode,22)){
+				switch((byte)(registers[16] & 0xF)){
+				case 0x0:	/*USR*/
+				case 0xF:	/*SYS*/
+					registers[rd] = registers[16];
+					break;
+				case 0x1:	/*FIQ*/
+					registers[rd] = myEngine.myCPU.bankedFIQ[0];
+					break;
+				case 0x2:	/*IRQ*/
+					registers[rd] = myEngine.myCPU.bankedIRQ[0];
+					break;
+				case 0x3:	/*SVC*/
+					registers[rd] = myEngine.myCPU.bankedSVC[0];
+					break;
+				case 0x7:	/*ABT*/
+					registers[rd] = myEngine.myCPU.bankedABT[0];
+					break;
+				case 0xB:	/*UND*/
+					registers[rd] = myEngine.myCPU.bankedUND[0];
+					break;
+				}
+			}else{
+				registers[rd] = registers[16];
+			}
+		
+			cycles = 3;
+		}
+        
+        void arm_msr()
+		{
+			uint rm = 0;
+			
+			rm = opcode & 0x0F;
+		
+			if(BIT_N(opcode,22)){
+				switch((byte)(registers[16] & 0xF)){
+				case 0x0:	/*USR*/
+				case 0xF:	/*SYS*/
+					registers[16] = registers[rm];
+					break;
+				case 0x1:	/*FIQ*/
+					myEngine.myCPU.bankedFIQ[0] = registers[rm];
+					myEngine.myCPU.SwapRegisters(Armcpu.FIQ);
+					break;
+				case 0x2:	/*IRQ*/
+					myEngine.myCPU.bankedIRQ[0] = registers[rm];
+					myEngine.myCPU.SwapRegisters(Armcpu.IRQ);
+					break;
+				case 0x3:	/*SVC*/
+					myEngine.myCPU.bankedSVC[0] = registers[rm];
+					myEngine.myCPU.SwapRegisters(Armcpu.SVC);
+					break;
+				case 0x7:	/*ABT*/
+					myEngine.myCPU.bankedABT[0] = registers[rm];
+					myEngine.myCPU.SwapRegisters(Armcpu.ABT);
+					break;
+				case 0xB:	/*UND*/
+					myEngine.myCPU.bankedUND[0] = registers[rm];
+					myEngine.myCPU.SwapRegisters(Armcpu.UND);
+					break;
+				}
+			}else{
+				registers[16] = registers[rm];
+			}
+			
+			switch((byte)(registers[16] & 0xF)){
+				case 0x0:	/*USR*/
+				case 0xF:	/*SYS*/
+					myEngine.myCPU.SwapRegisters(Armcpu.USR);
+					break;
+				case 0x1:	/*FIQ*/
+					myEngine.myCPU.SwapRegisters(Armcpu.FIQ);
+					break;
+				case 0x2:	/*IRQ*/
+					myEngine.myCPU.SwapRegisters(Armcpu.IRQ);
+					break;
+				case 0x3:	/*SVC*/
+					myEngine.myCPU.SwapRegisters(Armcpu.SVC);
+					break;
+				case 0x7:	/*ABT*/
+					myEngine.myCPU.SwapRegisters(Armcpu.ABT);
+					break;
+				case 0xB:	/*UND*/
+					myEngine.myCPU.SwapRegisters(Armcpu.UND);
+					break;
+			}
+			
+		
+			cycles = 3;
+		}
+        #endregion
+        
+        #region Section 7
+        void arm_mla()
+        {
+        	uint rm = (opcode >> 0) & 0x0E;
+        	uint rs = (opcode >> 8) & 0x0E;
+        	uint rn = (opcode >> 12) & 0x0E;
+        	uint rd = (opcode >> 16) & 0x0E;
+        	
+        	registers[rd] = (registers[rm] * registers[rs]) + registers[rn];
+
+        	set_dp_flags(registers[rd]);
+        	
+        	//Need to fix cycles
+        	cycles = 3;
+		}
+        
+        void arm_mul()
+        {
+        	uint rm = (opcode >> 0) & 0x0E;
+        	uint rs = (opcode >> 8) & 0x0E;
+        	uint rn = (opcode >> 12) & 0x0E;
+        	uint rd = (opcode >> 16) & 0x0E;
+        	
+        	registers[rd] = registers[rm] * registers[rs];
+
+        	set_dp_flags(registers[rd]);
+        	
+        	//Need to fix cycles
+        	cycles = 3;
+		}
+        
+        //Long Variants
+        void arm_mlal()
+        {
+        	uint rm = (opcode >> 0) & 0x0E;
+        	uint rs = (opcode >> 8) & 0x0E;
+        	uint rdlo = (opcode >> 12) & 0x0E;
+        	uint rdhi = (opcode >> 16) & 0x0E;
+        	
+        	if (BIT_N(opcode,22)) {	//If it's signed...
+				// SMLAL
+                long accum = (((long)((int)registers[rdhi])) << 32) | registers[rdlo];
+                long result = ((long)((int)registers[rm])) * ((long)((int)registers[rs]));
+                result += accum;
+                registers[rdhi] = (uint)(result >> 32);
+                registers[rdlo] = (uint)(result & 0xFFFFFFFF);
+    		}
+        	else
+        	{
+        		// UMLAL
+                ulong accum = (((ulong)registers[rdhi]) << 32) | registers[rdlo];
+                ulong result = ((ulong)registers[rm]) * registers[rs];
+                result += accum;
+                registers[rdhi] = (uint)(result >> 32);
+                registers[rdlo] = (uint)(result & 0xFFFFFFFF);
+        	}
+			
+        	set_dp_flags(registers[rdhi]);
+        	
+        	//Need to fix cycles
+        	cycles = 5;
+		}
+        
+        void arm_mull()
+        {
+        	uint rm = (opcode >> 0) & 0x0E;
+        	uint rs = (opcode >> 8) & 0x0E;
+        	uint rdlo = (opcode >> 12) & 0x0E;
+        	uint rdhi = (opcode >> 16) & 0x0E;
+        	
+        	if (BIT_N(opcode,22)) {	//If it's signed...
+				// SMULL
+                long result = ((long)((int)registers[rm])) * ((long)((int)registers[rs]));
+                registers[rdhi] = (uint)(result >> 32);
+                registers[rdlo] = (uint)(result & 0xFFFFFFFF);
+    		}
+        	else
+        	{
+        		// UMULL
+                ulong result = ((ulong)registers[rm]) * registers[rs];
+                registers[rdhi] = (uint)(result >> 32);
+                registers[rdlo] = (uint)(result & 0xFFFFFFFF);
+        	}
+			
+        	set_dp_flags(registers[rdhi]);
+        	
+        	//Need to fix cycles
+        	cycles = 5;
+		}
+        #endregion
+        
+        #region Section 9
+        void arm_ldr()
+        {
+        	uint rd = 0;
+        	uint rn = 0;
+        	uint rm = 0;
+        	uint address = 0;
+        	uint fimmed = 0;
+        	uint fpreindex = 0;
+        	uint faddbase = 0;
+        	uint fbyte = 0;
+        	uint fwriteback = 0;
+        	
+        	rd = (opcode >> 12) & 0x0F;
+        	rn = (opcode >> 16) & 0x0F;
+        	
+        	fimmed = 	((opcode >> 25) & 1);
+        	fpreindex = ((opcode >> 24) & 1);
+        	faddbase = 	((opcode >> 23) & 1);
+        	fbyte = 	((opcode >> 22) & 1);
+        	fwriteback =((opcode >> 21) & 1);
+        	
+        	address = registers[rn];
+        	
+        	if(fimmed!=0)
+        	{
+				rm = imm_shift(opcode);
+        	}
+        	else
+        	{
+				rm = opcode & 0xFFF;
+			}
+        	
+        	if(fpreindex!=0)
+        	{
+				if(faddbase!=0)
+				{
+					address += rm;
+				}
+				else
+				{
+					address -= rm;
+				}
+			}
+        	
+        	if(fbyte!=0)
+        	{
+        		registers[rd] = myEngine.myMemory.ReadByte(address);
+        	}
+        	else
+        	{
+        		registers[rd] = myEngine.myMemory.ReadWord(address);
+        	}
+        	
+        	if (rd == 15)
+            {
+            	registers[15] &= ~3U;
+            	FlushQueue();
+            }
+        	
+        	if(fpreindex==0)
+        	{
+				if(faddbase!=0)
+				{
+					address += rm;
+				}
+				else
+				{
+					address -= rm;
+				}
+			}
+        	
+        	if((fwriteback==1) || (fpreindex==0)){	/*Write-back: ‘‚«ž‚Ýæ‚ÌƒAƒhƒŒƒX‚ðŽc‚µ‚Ä‚¨‚­*/
+				registers[rn] = address;
+			}
+        	
+        	cycles = 3;
+		}
+        
+        void arm_str()
+        {
+        	uint rd = 0;
+        	uint rn = 0;
+        	uint rm = 0;
+        	uint address = 0;
+        	uint fimmed = 0;
+        	uint fpreindex = 0;
+        	uint faddbase = 0;
+        	uint fbyte = 0;
+        	uint fwriteback = 0;
+        	uint amount = 0;
+        	
+        	rd = (opcode >> 12) & 0x0F;
+        	rn = (opcode >> 16) & 0x0F;
+        	
+        	fimmed = 	((opcode >> 25) & 1);
+        	fpreindex = ((opcode >> 24) & 1);
+        	faddbase = 	((opcode >> 23) & 1);
+        	fbyte = 	((opcode >> 22) & 1);
+        	fwriteback =((opcode >> 21) & 1);
+        	
+        	address = registers[rn];
+        	
+        	if(fimmed!=0)
+        	{
+				rm = imm_shift(opcode);
+        	}
+        	else
+        	{
+				rm = opcode & 0xFFF;
+			}
+        	
+        	if(fpreindex!=0)
+        	{
+				if(faddbase!=0)
+				{
+					address += rm;
+				}
+				else
+				{
+					address -= rm;
+				}
+			}
+        	
+        	amount = registers[rd];
+            if (rd == 15) amount += 4;
+        	
+        	if(fbyte!=0)
+        	{
+        		myEngine.myMemory.WriteByte(address,(byte)(amount & 0xFF));
+        	}
+        	else
+        	{
+        		myEngine.myMemory.WriteWord(address,amount);
+        	}
+        	
+        	if(fpreindex==0)
+        	{
+				if(faddbase!=0)
+				{
+					address += rm;
+				}
+				else
+				{
+					address -= rm;
+				}
+			}
+        	
+        	if((fwriteback==1) || (fpreindex==0)){	/*Write-back: ‘‚«ž‚Ýæ‚ÌƒAƒhƒŒƒX‚ðŽc‚µ‚Ä‚¨‚­*/
+				registers[rn] = address;
+			}
+        	
+        	cycles = 2;
+		}
+        #endregion
+
+        #region Section 11
+        void arm_ldm()
+        {
+            uint rn = 0;
+            int lst = 0;
+            uint done = 0;
+            uint address = 0;
+            uint fimmed = 0;
+            uint fpreindex = 0;
+            uint faddbase = 0;
+            uint fbyte = 0;
+            uint fwriteback = 0;
+
+            rn = (opcode >> 16) & 0x0F;
+
+            fpreindex = ((opcode >> 24) & 1);
+            faddbase = ((opcode >> 23) & 1);
+            fbyte = ((opcode >> 22) & 1);
+            fwriteback = ((opcode >> 21) & 1);
+
+            address = registers[rn];
+
+            cycles = 3;
+
+            if (BIT_N(opcode, 23)) lst = 0; else lst = 15;
+
+            while (done==0)
+            {
+                if (BIT_N(opcode, lst))
+                {
+                    cycles++;
+                    if (fpreindex != 0)
+                    {
+                        if (faddbase != 0)
+                        {
+                            address += 4;
+                        }
+                        else
+                        {
+                            address -= 4;
+                        }
+                    }
+
+                    if (fbyte != 0)
+                    {
+                        registers[lst] = myEngine.myMemory.ReadByte(address);
+                    }
+                    else
+                    {
+                        registers[lst] = myEngine.myMemory.ReadWord(address);
+                    }
+
+                    if (lst == 15)
+                    {
+                        registers[lst] &= ~3U;
+                        FlushQueue();
+                    }
+
+                    if (fpreindex == 0)
+                    {
+                        if (faddbase != 0)
+                        {
+                            address += 4;
+                        }
+                        else
+                        {
+                            address -= 4;
+                        }
+                    }
+                }
+
+                if (BIT_N(opcode, 23) && (lst >= 15)) done = 1;
+                if ((!BIT_N(opcode, 23)) && (lst <= 0)) done = 1;
+                if (BIT_N(opcode, 23)) lst++; else lst--; 
+            }
+
+            if ((fwriteback == 1)/* || (fpreindex == 0)*/)
+            {	/*Write-back: ‘‚«ž‚Ýæ‚ÌƒAƒhƒŒƒX‚ðŽc‚µ‚Ä‚¨‚­*/
+                registers[rn] = address;
+            }
+
+        }
+
+        void arm_stm()
+        {
+            uint rn = 0;
+            int lst = 0;
+            uint done = 0;
+            uint address = 0;
+            uint fimmed = 0;
+            uint fpreindex = 0;
+            uint faddbase = 0;
+            uint fbyte = 0;
+            uint fwriteback = 0;
+
+            rn = (opcode >> 16) & 0x0F;
+
+            fpreindex = ((opcode >> 24) & 1);
+            faddbase = ((opcode >> 23) & 1);
+            fbyte = ((opcode >> 22) & 1);
+            fwriteback = ((opcode >> 21) & 1);
+
+            address = registers[rn];
+
+            cycles = 3;
+
+            if (BIT_N(opcode, 23)) lst = 0; else lst = 15;
+
+            while (done == 0)
+            {
+                if (BIT_N(opcode, lst))
+                {
+                    cycles++;
+                    if (fpreindex != 0)
+                    {
+                        if (faddbase != 0)
+                        {
+                            address += 4;
+                        }
+                        else
+                        {
+                            address -= 4;
+                        }
+                    }
+
+                    if (fbyte != 0)
+                    {
+                        myEngine.myMemory.WriteByte(address, (byte)(registers[lst] & 0xFF));
+                    }
+                    else
+                    {
+                        myEngine.myMemory.WriteWord(address, registers[lst]);
+                    }
+
+                    if (lst == 15)
+                    {
+                        registers[lst] &= ~3U;
+                        FlushQueue();
+                    }
+
+                    if (fpreindex == 0)
+                    {
+                        if (faddbase != 0)
+                        {
+                            address += 4;
+                        }
+                        else
+                        {
+                            address -= 4;
+                        }
+                    }
+                }
+
+                if (BIT_N(opcode, 23) && (lst >= 15)) done = 1;
+                if ((!BIT_N(opcode, 23)) && (lst <= 0)) done = 1;
+                if (BIT_N(opcode, 23)) lst++; else lst--;
+            }
+
+            if ((fwriteback == 1) || (fpreindex == 0))
+            {	/*Write-back: ‘‚«ž‚Ýæ‚ÌƒAƒhƒŒƒX‚ðŽc‚µ‚Ä‚¨‚­*/
+                registers[rn] = address;
+            }
+
+        }
+        #endregion
+
+        #region Section 12
+        void arm_swp()
+		{
+        	uint rd = 0;
+        	uint rn = 0;
+        	uint rm = 0;
+        	
+        	rm = (opcode & 0x0F);
+        	rd = (opcode >> 12) & 0x0F;
+        	rn = (opcode >> 16) & 0x0F;
+        	
+        	if(BIT_N(opcode,22))
+        	{
+        		myEngine.myMemory.WriteByte(registers[rm], (byte)registers[rm]);
+				registers[rd] = (uint)myEngine.myMemory.ReadByte(registers[rm]);
+        	}
+        	else
+        	{
+				myEngine.myMemory.WriteWord(registers[rm], registers[rm]);
+				registers[rd] = myEngine.myMemory.ReadWord(registers[rm]);
+        	}
+        	
+        	cycles = 4;
+        }
+        #endregion
+        
+        #region Section 13
+        void arm_swi()
+		{
+			uint swi = (uint)(opcode & 0x00FFFFFF);
+		 	
+			//Not done yet
+			if(swi==0xFF) //Log
+			{
+				byte character = (byte)myEngine.myCPU.Registers[1];
+				if(character == 0xFF) 
+				{
+					myEngine.myLog.WriteLog(Environment.NewLine);
+				}
+				else
+				{
+					myEngine.myLog.WriteLog(ASCIIEncoding.ASCII.GetString(new byte[] {character}));
+				}
+			}
+		 	
+		 	cycles = 3;
 		}
         #endregion
         
@@ -132,10 +1013,121 @@ namespace pGBA
             zero = (myEngine.myCPU.Registers[16] >> Armcpu.Z_BIT) & 1;
             carry = (myEngine.myCPU.Registers[16] >> Armcpu.C_BIT) & 1;
             overflow = (myEngine.myCPU.Registers[16] >> Armcpu.V_BIT) & 1;
-        }
+        }        
+        
+        private void set_sub_flag(uint a, uint b, uint c)
+		{	
+        	if(((opcode>>20)&1)==0)
+        	{
+        		//If S flag not set return and do nothing
+        		return;
+        	}
+        	
+        	/*sub,rsb,rsc,cmp*/
+        	if(c==0)
+        	{
+        		zero = 1; 
+        	}
+        	else
+        	{
+        		zero = 0;
+        	}
+        	
+			if(((c>>31)&1)==1)
+        	{
+        		negative = 1; 
+        	}
+        	else
+        	{
+        		negative = 0;
+        	}
+        	
+        	if(((((a & (~b)) | (a & (~c)) | ((~b) & (~c)))>>31)&1)==1)
+        	{
+        		carry = 1; 
+        	}
+        	else
+        	{
+        		carry = 0;
+        	}
+        	
+        	if(((((a & ~(b | c)) | ((b & c) & (~a)))>>31)&1)==1)
+        	{
+        		overflow = 1; 
+        	}
+        	else
+        	{
+        		overflow = 0;
+        	}
+		}
+		
+		private void set_add_flag(uint a, uint b, uint c)
+		{	
+			if(((opcode>>20)&1)==0)
+        	{
+        		//If S flag not set return and do nothing
+        		return;
+        	}
+			
+			/*add,adc,cmn*/
+			if(c==0)
+        	{
+        		zero = 1; 
+        	}
+        	else
+        	{
+        		zero = 0;
+        	}
+			
+			if(((c>>31)&1)==1)
+        	{
+        		negative = 1; 
+        	}
+        	else
+        	{
+        		negative = 0;
+        	}
+        	
+        	if(((((a & b) | (a & (~c)) | (b & (~c)))>>31)&1)==1)
+        	{
+        		carry = 1; 
+        	}
+        	else
+        	{
+        		carry = 0;
+        	}
+        	
+        	if(((((a & b & (~c)) | ((~a) & (~b) & c))>>31)&1)==1)
+        	{
+        		overflow = 1; 
+        	}
+        	else
+        	{
+        		overflow = 0;
+        	}
+		}
+		
+		private void set_dp_flags(uint a)	
+		{	
+			if(((opcode>>20)&1)==0)
+        	{
+        		//If S flag not set return and do nothing
+        		return;
+        	}
+			
+			/*muls,mlas,and,eor,tst,teq,orr,mov,bic,mvn*/
+			negative = a >> 31;
+            zero = a == 0 ? 1U : 0U;
+		}
+		
+		private bool BIT_N(uint a, int b)
+		{
+			uint test = ((a>>b)&1);
+			return (bool)(test==1) ? true : false;
+		}
         #endregion
 
-        public uint Emulate()
+        public int Emulate()
         {
             byte opcode_24_4;
             uint cond = 0;
@@ -200,61 +1192,139 @@ namespace pGBA
             {
 	            switch (opcode_24_4)
 	            {
+	            	case 0x0: /*0000*/
+						if(((opcode >> 4) & 0x0F) == 0x09)
+						{
+							if(BIT_N(opcode,23))
+							{	
+								/*Multiply Long*/
+								if(BIT_N(opcode,21))
+								{	
+									/*Accumelate*/
+									arm_mlal();
+									break;
+								}
+								else
+								{
+									arm_mull();
+									break;
+								}
+							}
+	            			else
+	            			{					
+	            				/*Multiply*/
+	            				if(BIT_N(opcode,21))
+								{	
+									arm_mla();
+									break;
+								}
+								else
+								{
+									arm_mul();
+									break;
+								}
+							}
+						}
+	            		break;
+					case 0x1:	/*0001*/
+						if(((opcode >> 4) & 0xFF) == 0x09)
+						{	
+							/*00001001*/
+							arm_swp();	/*Single Data Swap*/
+							break;
+						}
+						if((opcode & 0x0FFFFFF0) == 0x012FFF10)
+						{
+							arm_bx();	/*Branch and Exchange*/
+							break;
+						}
+						if((opcode & 0x0FFF0000) == 0x016F0000)
+						{
+			            //  arm_clz();	/*Count Leading Zeros*/
+							break;
+			            }
+						if((opcode&0xFFF00000)==0xE1000000){
+			            	arm_mrs();
+			            	break;
+			            }
+			            if((opcode&0xFFF00000)==0xE1200000){
+			            	arm_msr();
+			            	break;
+			            }
+						
+						if(BIT_N(opcode,4))
+						{	
+							/*Halfword data Transfer:*/
+							if(BIT_N(opcode,22))
+							{	
+								/*immdiate offset*/
+								if(BIT_N(opcode,20))
+								{
+			            			/*Load from memory*/
+									//arm_ldrs_imm();
+								}
+			            		else
+			            		{					
+			            			/*Store to memory*/
+									//arm_strs_imm();
+								}
+								break;
+							}
+							else
+							{					
+								/*register offset*/
+								if(BIT_N(opcode,20))
+								{	
+									/*Load from memory*/
+									//arm_ldrs();
+								}
+								else
+								{					
+									/*Store to memory*/
+									//arm_strs();
+								}
+								break;
+							}
+						}
+						
+						/*Data Processing can be eitehr 0x1 or 0x3*/
+						arm_dataproc();
+						break;
 	            	/*Data Processing*/
 	            	case 0x2:	/*0010*/
-					case 0x3:	/*0011*/
-				    if((opcode&0xFFF00000)==0xE1000000){
-		            	//arm_mrs();
-		            	break;
-		            }
-		            if((opcode&0xFFF00000)==0xE1200000){
-		            	//arm_msr();
-		            	break;
-		            }
-		            
-					switch((byte)((opcode >> 21) & 0x0F)){
-						case 0x0: /*arm_and();*/ break;
-						case 0x1: /*arm_eor();*/ break;
-						case 0x2: /*arm_sub();*/ break;
-						case 0x3: /*arm_rsb();*/ break;
-						case 0x4: /*arm_add();*/ break;
-						case 0x5: /*arm_adc();*/ break;
-						case 0x6: /*arm_sbc();*/ break;
-						case 0x7: /*arm_rsc();*/ break;
-						case 0x8: /*arm_tst();*/ break;
-						case 0x9: /*arm_teq();*/ break;
-						case 0xA: /*arm_cmp();*/ break;
-						case 0xB: /*arm_cmn();*/ break;
-						case 0xC: /*arm_orr();*/ break;
-						case 0xD: arm_mov(); break;
-						case 0xE: /*arm_bic();*/ break;
-						case 0xF: /*arm_mvn();*/ break;
-					}
-					break;
+					case 0x3:	/*0011*/	
+					
+						/*Data Processing can be eitehr 0x1 or 0x3*/
+						arm_dataproc();
+						break;
+					
 	            	/*Single Data Transfer*/
 					case 0x4:	/*0100*/
 					case 0x5:	/*0101*/
 					case 0x6:	/*0110*/
 					case 0x7:	/*0111*/
-						if(((opcode>>20)&1)==1){	/*Load from memory*/
-							//arm7tdmi_arm_ldr();
-							break;
-						}else if(((opcode>>20)&1)==0){					/*Store to memory*/
-							//arm7tdmi_arm_str();
-							break;
+						if(BIT_N(opcode,20))
+						{	
+							/*Load from memory*/
+							arm_ldr();
 						}
-						if(((opcode>>4)&1)==1){
-							//arm7tdmi_set_cpu_mode(ARM_MODE_UND);/*UNDƒ‚[ƒh*/
-							break;
+						else
+						{
+							/*Store to memory*/
+							arm_str();
 						}
 						break;
 					/*Block Data Transfer*/
 					case 0x8:	/*1000*/
 					case 0x9:	/*1001*/
-						if(((opcode>>20)&1)==1){	/*Load from */
-							//arm_ldm();
-						}else{
-							//arm_stm();
+						if(BIT_N(opcode,20))
+						{	
+							/*Load from */
+							arm_ldm();
+						}
+						else
+						{
+							arm_stm();
 						}
 						break;
 	            	/*Branch*/
@@ -267,7 +1337,7 @@ namespace pGBA
 						break;
 					/*Software interrupt*/
 					case 0xF:	/*1111*/
-						//arm_swi();
+						arm_swi();
 						break;
 					/*Default*/
 	                default:

@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Windows.Forms;
+using System.Threading;
 
 namespace pGBA
 {
@@ -21,8 +22,11 @@ namespace pGBA
 	/// </summary>
 	public partial class MainForm : Form
 	{
-		private bool emulate=false;
 		private Engine myEngine;
+		private Thread executionThread = null;
+		
+		int vramCycles = 0;
+        bool inHblank = false;
 			
 		public MainForm()
 		{
@@ -31,25 +35,37 @@ namespace pGBA
 			//
 			InitializeComponent();
 			
+			myEngine = new Engine();
+			
+			Monitor.Enter(this);
 			//
 			// TODO: Add constructor code after the InitializeComponent() call.
 			//
-			myEngine = new Engine();
+			executionThread = new Thread(RunEmulationLoop);
+            executionThread.Start();
+
+            // Wait for the initialization to complete
+            Monitor.Wait(this);
 		}
-		private Bitmap Scrn = null;
+		
+		public void UpdateScreen()
+		{
+			if(myEngine.myGfx.curLine <= 160)
+				scrnBox.Image = myEngine.Scrn;
+		}
 		
 		void MainFormLoad(object sender, EventArgs e)
 		{
 			int i=0;
-			Scrn = new Bitmap(240, 160, PixelFormat.Format16bppRgb555);
-			while(i++!=239) Scrn.SetPixel(i,0,Color.FromArgb(0,255,0));
+			UpdateScreen();
+			while(i++!=239) myEngine.Scrn.SetPixel(i,0,Color.FromArgb(0,255,0));
 			i=0;
-			while(i++!=239) Scrn.SetPixel(i,159,Color.FromArgb(255,0,255));
+			while(i++!=239) myEngine.Scrn.SetPixel(i,159,Color.FromArgb(255,0,255));
 			i=0;
-			while(i++!=159) Scrn.SetPixel(0,i,Color.FromArgb(255,255,255));
+			while(i++!=159) myEngine.Scrn.SetPixel(0,i,Color.FromArgb(255,255,255));
 			i=0;
-			while(i++!=159) Scrn.SetPixel(239,i,Color.FromArgb(0,255,255));
-			scrnBox.Image = Scrn;
+			while(i++!=159) myEngine.Scrn.SetPixel(239,i,Color.FromArgb(0,255,255));
+			//scrnBox.Image = myEngine.Scrn;
 		}
 		
 		void OpenGBAToolStripMenuItemClick(object sender, EventArgs e)
@@ -74,6 +90,9 @@ namespace pGBA
 		void ExitToolStripMenuItemClick(object sender, EventArgs e)
 		{
 			this.Close();
+			
+			Monitor.Enter(this);
+            Monitor.Exit(this);
 		}
 		
 		void DisassemblerToolStripMenuItemClick(object sender, EventArgs e)
@@ -110,14 +129,74 @@ namespace pGBA
 		
 		void RunToolStripMenuItemClick(object sender, EventArgs e)
 		{
-			emulate = true;
+			myEngine.emulate = true;
 			timer.Start();
+			
+			Monitor.Pulse(this);
+            Monitor.Exit(this);
+		}
+		
+		void PauseToolStripMenuItemClick(object sender, EventArgs e)
+		{
+			myEngine.emulate = false;
+			timer.Stop();
+			
+			Monitor.Enter(this);
 		}
 		
 		void TimerTick(object sender, EventArgs e)
 		{
-			if(emulate)
-				myEngine.myCPU.Step();
+			if(myEngine.myGfx.curLine < 160)
+				UpdateScreen();
+		}
+		
+		void RunEmulationLoop()
+		{			
+			UpdateScreen();
+			
+			lock (this)
+            {
+                Monitor.Pulse(this);
+                Monitor.Wait(this);
+                
+				if(myEngine.emulate)
+				{   
+					for (int frame = 0; frame < 60; frame++)
+					{
+						const int numSteps = 2284;
+		                const int cycleStep = 123;
+		
+		                for (int i = 0; i < numSteps; i++)
+		                {
+		                	if (vramCycles <= 0)
+		                    {
+			                	if (inHblank)
+			                    {
+			                    	vramCycles += 960;
+			                    	//LeaveHBlank here
+			                    	myEngine.myGfx.LeaveHBlank();
+			                        inHblank = false;
+			                    }
+			                    else
+			                    {
+			                    	vramCycles += 272;
+			                    	//RenderLine here
+			                    	myEngine.myGfx.RenderLine();
+			                    	//EnterHBlank here
+			                    	myEngine.myGfx.EnterHBlank();
+			                    	
+			                        inHblank = true;
+			                    }
+		                	}
+		                	
+		                	myEngine.myCPU.Emulate(cycleStep);
+							
+							vramCycles -= cycleStep;
+		                }
+					}
+				}
+				Monitor.Pulse(this);
+			}
 		}
 	}
 }

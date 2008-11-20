@@ -63,24 +63,24 @@ namespace pGBA
         public uint[] Registers =  new uint[17];
         
         // Banked registers
-        private uint[] bankedFIQ = new uint[7];
-        private uint[] bankedIRQ = new uint[2];
-        private uint[] bankedSVC = new uint[2];
-        private uint[] bankedABT = new uint[2];
-        private uint[] bankedUND = new uint[2];
+        public uint[] bankedFIQ = new uint[7];
+        public uint[] bankedIRQ = new uint[2];
+        public uint[] bankedSVC = new uint[2];
+        public uint[] bankedABT = new uint[2];
+        public uint[] bankedUND = new uint[2];
         
         // Saved CPSR's
-        private uint spsrFIQ = 0;
-        private uint spsrIRQ = 0;
-        private uint spsrSVC = 0;
-        private uint spsrABT = 0;
-        private uint spsrUND = 0;
+        public uint spsrFIQ = 0;
+        public uint spsrIRQ = 0;
+        public uint spsrSVC = 0;
+        public uint spsrABT = 0;
+        public uint spsrUND = 0;
         
 		private Engine myEngine;
-		private Thumb myThumb;
-		private Arm myArm;
+		public Thumb myThumb;
+		public Arm myArm;
 		
-		public uint cycles;
+		public int cycles;
 		
 		public Armcpu(Engine engine)
 		{
@@ -94,14 +94,17 @@ namespace pGBA
 			
 			//Clear the log on each reset
 			myEngine.myLog.ClearLog();
-				
-			//Only here to test opcodes
-			/*Registers[1] = 0x00000001;
-			Registers[2] = 0x00000100;*/
+			
+			//Reset all Registers to 0
+			for(int i=0; i<16; i++)
+				Registers[i] = 0x00000000;
 			
 			//Init Default Registers
 			Registers[13] = 0x03007F00;
 			Registers[15] = 0x08000000;
+			
+			bankedSVC[0] = 0x03007FE0;
+            bankedIRQ[0] = 0x03007FA0;
 			
 			Registers[16] = 0x0000001F;
 			//Default to thumb mode (Cheating)
@@ -116,7 +119,7 @@ namespace pGBA
 			myArm.Begin();
 		}
 		
-		public void Emulate(uint cpu_cycles)
+		public void Emulate(int cpu_cycles)
 		{
 			cycles = cpu_cycles;
 			while(cycles > 0)
@@ -138,6 +141,15 @@ namespace pGBA
 				cycles -= myArm.Emulate();
 		}
 		
+		public void StepScanline()
+		{
+			Emulate(960);
+			//myEngine.myGfx.RenderLine();
+			myEngine.myGfx.EnterHBlank();
+			Emulate(272);
+			myEngine.myGfx.LeaveHBlank();
+		}
+		
 		private void SwapRegsHelper(uint[] swapRegs)
         {
             for (int i = 14; i > 14 - swapRegs.Length; i--)
@@ -148,7 +160,7 @@ namespace pGBA
             }
         }
 
-        private void SwapRegisters(uint bank)
+        public void SwapRegisters(uint bank)
         {
             switch (bank & 0x1F)
             {
