@@ -8,6 +8,9 @@
  */
 
 using System;
+using System.Drawing;
+using System.Drawing.Imaging;
+using System.Windows.Forms;
 
 namespace pGBA
 {
@@ -20,12 +23,19 @@ namespace pGBA
 		public Armcpu myCPU;
 		public Memory myMemory;
 		public Logging myLog;
+		public Gfx myGfx;
+		public bool emulate;
+		public Bitmap Scrn;
 		
 		public Engine()
 		{
+			Scrn = new Bitmap(240, 160, PixelFormat.Format16bppRgb555);
+			
 			myCPU = new Armcpu(this);
 			myMemory = new Memory();
 			myLog = new Logging();
+			myGfx = new Gfx(this);
+			emulate=false;
 		}
 	}
 }

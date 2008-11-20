@@ -53,7 +53,7 @@ namespace pGBA
         {
             if (myEngine.myCPU != null && myEngine.myMemory != null)
             {
-                if (inArm==0)
+                if ((myEngine.myCPU.Registers[16] & Armcpu.T_MASK)!=0)
                 {
                     uint pc = (uint)(myEngine.myCPU.Registers[15] - 0x2U);
                     int numItems = disasmList.Height / disasmList.ItemHeight;
@@ -97,7 +97,7 @@ namespace pGBA
 
 			for(i=0; i<18; i++)
 			{
-				if(inArm==0)
+				if((myEngine.myCPU.Registers[16] & Armcpu.T_MASK)!=0) 
 				{
 					tAdr = (uint)(curPC+(i*2));
 					disasmList.Items[i] = disasm.DisasmThumb(tAdr);
@@ -134,10 +134,6 @@ namespace pGBA
 		
 		private void TimerTick(object sender, EventArgs e)
 		{			
-			inArm = 0;
-			if((myEngine.myCPU.Registers[16] & Armcpu.T_MASK)==0) 
-				inArm=1;
-			
 			if(!autoUpdate.Checked) 
 				return;
 			
@@ -155,16 +151,16 @@ namespace pGBA
 			switch (e.Type)
             {
                 case ScrollEventType.SmallIncrement:
-					///if(thumb)
+					if((myEngine.myCPU.Registers[16] & Armcpu.T_MASK)!=0) 
                     	curPC += 2;
-					//else
-					//	curPC += 4;
+					else
+						curPC += 4;
                     break;
                 case ScrollEventType.SmallDecrement:
-                    ///if(thumb)
+                    if((myEngine.myCPU.Registers[16] & Armcpu.T_MASK)!=0) 
                     	curPC -= 2;
-					//else
-					//	curPC -= 4;
+					else
+						curPC -= 4;
                     break;
                 case ScrollEventType.LargeIncrement:
                     curPC += 0x100;
@@ -252,6 +248,36 @@ namespace pGBA
 			{
 				uint pc = (uint)(myEngine.myCPU.Registers[15] - 0x4U);
 				disasmList.SelectedIndex = (int)(pc - curPC) / 4;
+			}
+		}
+		
+		void Button1Click(object sender, EventArgs e)
+		{
+			if(myEngine.myMemory.romLoaded)
+			{
+				int ii=1;
+				while(ii!=0)
+				{
+					myEngine.myCPU.StepScanline();
+					RefreshRegisterList();
+					UpdateDisassembly();
+					ii-=1;
+				}
+			}
+		}
+		
+		void Button2Click(object sender, EventArgs e)
+		{
+			if(myEngine.myMemory.romLoaded)
+			{
+				int ii=0;
+				while(ii<160)
+				{
+					myEngine.myCPU.StepScanline();
+					RefreshRegisterList();
+					UpdateDisassembly();
+					ii++;
+				}
 			}
 		}
 	}

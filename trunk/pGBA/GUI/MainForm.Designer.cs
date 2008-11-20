@@ -131,6 +131,7 @@ namespace pGBA
 			this.pauseToolStripMenuItem.Name = "pauseToolStripMenuItem";
 			this.pauseToolStripMenuItem.Size = new System.Drawing.Size(105, 22);
 			this.pauseToolStripMenuItem.Text = "&Pause";
+			this.pauseToolStripMenuItem.Click += new System.EventHandler(this.PauseToolStripMenuItemClick);
 			// 
 			// toolsToolStripMenuItem
 			// 
@@ -193,7 +194,7 @@ namespace pGBA
 			// timer
 			// 
 			this.timer.Enabled = true;
-			this.timer.Interval = 10;
+			this.timer.Interval = 20;
 			this.timer.Tick += new System.EventHandler(this.TimerTick);
 			// 
 			// MainForm
