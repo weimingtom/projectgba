@@ -633,8 +633,6 @@ _drawtext:
 		ldrb 	r1,[r0]
 		add 	r0,#1
 		cmp 	r1,#0
-		beq 	_dt_null
-		cmp 	r1,#0
 		beq 	_dt_log
 		
 		@print to logger

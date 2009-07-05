@@ -281,7 +281,7 @@ namespace pGBA
 			//lsl rd,rs
 			int rd = (opcode & 0x07);
 			int rs = ((opcode>>3) & 0x07);
-			int shiftAmt = (int)(registers[rs] & 0xFF);
+			int shiftAmt = (int)(registers[rs] & 0x1F);
 			
 			if (shiftAmt == 0)
             {
@@ -315,7 +315,7 @@ namespace pGBA
 			//lsr rd,rs
 			int rd = (opcode & 0x07);
 			int rs = ((opcode>>3) & 0x07);
-			int shiftAmt = (int)(registers[rs] & 0xFF);
+			int shiftAmt = (int)(registers[rs] & 0x1F);
 			
 			if (shiftAmt == 0)
             {
@@ -1407,7 +1407,7 @@ namespace pGBA
 			return cycles;
 		}
 		
-		private void FlushQueue()
+		public void FlushQueue()
         {
             opcodeQueue = myEngine.myMemory.ReadShort(registers[15]);
             registers[15] += 2;

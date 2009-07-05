@@ -31,18 +31,26 @@ namespace pGBA
 		//Defines
 		public bool romLoaded=false;
 		public uint romSize;
-		
-		public Memory()
+
+        private Engine myEngine;
+
+        public Memory(Engine engine)
 		{
-			bios 	= new byte[0x3FFF];
-			wram 	= new byte[0x3FFFF];
-			iwram 	= new byte[0x7FFF];
-			io 		= new byte[0x3FF];
-			pal 	= new byte[0x3FF];
-			vram 	= new byte[0x17FFF];
-			oam		= new byte[0x3FF];
-			sram 	= new byte[0xFFFF];
+            myEngine = engine;
+            Reset();
 		}
+
+        public void Reset()
+        {
+            bios = new byte[0x3FFF + 1];
+            wram = new byte[0x3FFFF + 1];
+            iwram = new byte[0x7FFF + 1];
+            io = new byte[0x3FF + 1];
+            pal = new byte[0x3FF + 1];
+            vram = new byte[0x17FFF + 1];
+            oam = new byte[0x3FF + 1];
+            sram = new byte[0xFFFF + 1];
+        }
 		
 		public byte ReadByte(uint adr)
 		{
@@ -98,7 +106,14 @@ namespace pGBA
 			if((adr >= 0x04000000) && ((adr+1) <= 0x040003FF))
 			{
 				adr -= 0x04000000;
-				return (ushort)(io[adr]|io[adr+1]<<8);
+
+                switch(adr)
+                {
+                    case 0x04:
+                        return (ushort)((io[adr] | io[adr + 1] << 8) | (myEngine.myGfx.inHblank << 1) | myEngine.myGfx.inVblank);
+                    default:
+				        return (ushort)(io[adr]|io[adr+1]<<8);
+                }
 			}
 			
 			//VWRAM
