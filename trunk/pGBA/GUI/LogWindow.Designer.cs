@@ -36,34 +36,36 @@ namespace pGBA
 		/// </summary>
 		private void InitializeComponent()
 		{
-			this.components = new System.ComponentModel.Container();
-			this.timer = new System.Windows.Forms.Timer(this.components);
-			this.logBox = new System.Windows.Forms.TextBox();
-			this.SuspendLayout();
-			// 
-			// timer
-			// 
-			this.timer.Enabled = true;
-			this.timer.Tick += new System.EventHandler(this.TimerTick);
-			// 
-			// logBox
-			// 
-			this.logBox.Location = new System.Drawing.Point(27, 22);
-			this.logBox.Multiline = true;
-			this.logBox.Name = "logBox";
-			this.logBox.Size = new System.Drawing.Size(398, 226);
-			this.logBox.TabIndex = 0;
-			// 
-			// LogWindow
-			// 
-			this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
-			this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-			this.ClientSize = new System.Drawing.Size(459, 274);
-			this.Controls.Add(this.logBox);
-			this.Name = "LogWindow";
-			this.Text = "LogWindow";
-			this.ResumeLayout(false);
-			this.PerformLayout();
+            this.components = new System.ComponentModel.Container();
+            this.timer = new System.Windows.Forms.Timer(this.components);
+            this.logBox = new System.Windows.Forms.TextBox();
+            this.SuspendLayout();
+            // 
+            // timer
+            // 
+            this.timer.Enabled = true;
+            this.timer.Tick += new System.EventHandler(this.TimerTick);
+            // 
+            // logBox
+            // 
+            this.logBox.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.logBox.Location = new System.Drawing.Point(0, 0);
+            this.logBox.Multiline = true;
+            this.logBox.Name = "logBox";
+            this.logBox.Size = new System.Drawing.Size(459, 274);
+            this.logBox.TabIndex = 0;
+            // 
+            // LogWindow
+            // 
+            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
+            this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.ClientSize = new System.Drawing.Size(459, 274);
+            this.Controls.Add(this.logBox);
+            this.Name = "LogWindow";
+            this.Text = "LogWindow";
+            this.ResumeLayout(false);
+            this.PerformLayout();
+
 		}
 		private System.Windows.Forms.TextBox logBox;
 		private System.Windows.Forms.Timer timer;

@@ -103,6 +103,11 @@
     </Compile>
     <Compile Include="GUI\Program.cs" />
     <Compile Include="Core\Thumb.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
     <EmbeddedResource Include="GUI\DisassemblerForm.resx">
       <DependentUpon>DisassemblerForm.cs</DependentUpon>
     </EmbeddedResource>
@@ -114,6 +119,11 @@
     </EmbeddedResource>
     <EmbeddedResource Include="GUI\MemoryEditor.resx">
       <DependentUpon>MemoryEditor.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>

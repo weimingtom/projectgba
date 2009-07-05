@@ -338,7 +338,7 @@ namespace pGBA
 			rm = registers[opcode & 0x0F];
 			shift_type = (byte)((opcode >> 5) & 3);
 			
-			if((opcode & 0x08)!=0)
+			if((opcode & 16)!=0)
 			{
 				shift = (int)((opcode >> 8) & 0xF);
 				if (shift == 15)
@@ -444,7 +444,7 @@ namespace pGBA
 			
 			uint rd = 0;
         	uint rn = 0;
-        	uint offset = 0;
+        	int offset = 0;
         	uint address = 0;
         	uint fimmed = 0;
         	uint fpreindex = 0;
@@ -463,8 +463,6 @@ namespace pGBA
         	fwriteback =((opcode >> 21) & 1);
         	
         	address = registers[rn];
-        	
-        	if(rn==15) address += 4;
 			
 			if(load)
 			{
@@ -474,23 +472,51 @@ namespace pGBA
 			{
 				str += String.Format("str{0} ",opCond[opcode>>28]);
 			}
-			
+
+            if (fwriteback != 0) str += String.Format("!");
 			str += String.Format("r{0:d}",rd);
 			
 			if(fimmed!=0)
         	{
 				//offset = myEngine.myCPU.myArm.imm_shift(opcode);
+                uint rm = opcode & 0x0F;
+                byte shift_type = (byte)((opcode >> 5) & 3);
+                int shift = 0;
+
+                if ((opcode & 16) != 0)
+                {
+                    shift = (int)((opcode >> 8) & 0xF);
+                    if (shift == 15)
+                    {
+                        shift = (int)((registers[shift] + 0x4) & 0xFF);
+                    }
+                    else
+                    {
+                        shift = (int)(registers[shift] & 0xFF);
+                    }
+                }
+                else
+                {
+                    shift = (int)((opcode >> 7) & 0x1F);
+                }
+
+
+
+                str += String.Format(", [r{0:d},r{1:d}]", rn, rm);
+
         	}
         	else
         	{
-				offset = opcode & 0xFFF;
-			}
-        	
-        	amount = address + offset;
-        	
-        	str += String.Format(", [#0x{0:X8}]",amount+8);
-			
-			
+				offset = (int)(opcode & 0xFFF);
+
+                if (rn == 15) offset -= 16;
+                if (rd == 15) offset -= 20;
+
+                if(offset==0)
+                    str += String.Format(", [r{0:d}]", rn);
+                else
+                    str += String.Format(", [r{0:d},#0x{1:X}]", rn, offset);
+			} 					
 		
 			return str;
 		}

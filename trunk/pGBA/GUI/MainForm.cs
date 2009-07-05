@@ -10,9 +10,13 @@
 using System;
 using System.IO;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Windows.Forms;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Threading;
 
 namespace pGBA
@@ -22,11 +26,26 @@ namespace pGBA
 	/// </summary>
 	public partial class MainForm : Form
 	{
+        [StructLayout(LayoutKind.Sequential)]
+        public struct PeekMsg
+        {
+            public IntPtr hWnd;
+            public Message msg;
+            public IntPtr wParam;
+            public IntPtr lParam;
+            public uint time;
+            public System.Drawing.Point p;
+        }
+
+        [System.Security.SuppressUnmanagedCodeSecurity]
+        [DllImport("User32.dll", CharSet = CharSet.Auto)]
+        public static extern bool PeekMessage(out PeekMsg msg, IntPtr hWnd,
+                 uint messageFilterMin, uint messageFilterMax, uint flags);
+
 		private Engine myEngine;
 		private Thread executionThread = null;
 		
 		int vramCycles = 0;
-        bool inHblank = false;
 			
 		public MainForm()
 		{
@@ -37,22 +56,38 @@ namespace pGBA
 			
 			myEngine = new Engine();
 			
-			Monitor.Enter(this);
+			//Monitor.Enter(this);
 			//
 			// TODO: Add constructor code after the InitializeComponent() call.
 			//
-			executionThread = new Thread(RunEmulationLoop);
-            executionThread.Start();
+			//executionThread = new Thread(RunEmulationLoop);
+            //executionThread.Start();
 
             // Wait for the initialization to complete
-            Monitor.Wait(this);
+            //Monitor.Wait(this);
 		}
 		
 		public void UpdateScreen()
 		{
-			if(myEngine.myGfx.curLine <= 160)
-				scrnBox.Image = myEngine.Scrn;
+            if (myEngine.myGfx.curLine <= 160)
+            {
+                scrnBox.Image = myEngine.Scrn;
+            }
 		}
+
+        private void OnApplicationIdle(object sender, EventArgs e)
+        {
+            if (myEngine.myMemory.romLoaded == false || !Focused)
+            {
+                return;
+            }
+            PeekMsg msg;
+            while (!PeekMessage(out msg, IntPtr.Zero, 0, 0, 0))
+            {
+                RunEmulationLoop();
+                UpdateScreen();
+            }
+        }
 		
 		void MainFormLoad(object sender, EventArgs e)
 		{
@@ -66,10 +101,13 @@ namespace pGBA
 			i=0;
 			while(i++!=159) myEngine.Scrn.SetPixel(239,i,Color.FromArgb(0,255,255));
 			//scrnBox.Image = myEngine.Scrn;
+            Application.Idle += OnApplicationIdle;
 		}
 		
 		void OpenGBAToolStripMenuItemClick(object sender, EventArgs e)
 		{
+            myEngine.emulate = false;
+            timer.Stop();
 			if (openFileDialog.ShowDialog() == DialogResult.OK)
             {
 				using (Stream stream = openFileDialog.OpenFile())
@@ -83,7 +121,7 @@ namespace pGBA
 
                     myEngine.myMemory.LoadRom(rom);
                 }
-				myEngine.myCPU.Reset();
+                myEngine.Reset();
 			}
 		}
 		
@@ -91,8 +129,8 @@ namespace pGBA
 		{
 			this.Close();
 			
-			Monitor.Enter(this);
-            Monitor.Exit(this);
+			//Monitor.Enter(this);
+            //Monitor.Exit(this);
 		}
 		
 		void DisassemblerToolStripMenuItemClick(object sender, EventArgs e)
@@ -132,8 +170,8 @@ namespace pGBA
 			myEngine.emulate = true;
 			timer.Start();
 			
-			Monitor.Pulse(this);
-            Monitor.Exit(this);
+			//Monitor.Pulse(this);
+            //Monitor.Exit(this);
 		}
 		
 		void PauseToolStripMenuItemClick(object sender, EventArgs e)
@@ -141,27 +179,27 @@ namespace pGBA
 			myEngine.emulate = false;
 			timer.Stop();
 			
-			Monitor.Enter(this);
+			//Monitor.Enter(this);
 		}
 		
 		void TimerTick(object sender, EventArgs e)
 		{
-			if(myEngine.myGfx.curLine < 160)
-				UpdateScreen();
+            RunEmulationLoop();
+
+			//if(myEngine.myGfx.curLine < 160)
+			//	UpdateScreen();
 		}
 		
 		void RunEmulationLoop()
-		{			
-			UpdateScreen();
-			
-			lock (this)
+		{					
+			//lock (this)
             {
-                Monitor.Pulse(this);
-                Monitor.Wait(this);
+                //Monitor.Pulse(this);
+                //Monitor.Wait(this);
                 
 				if(myEngine.emulate)
 				{   
-					for (int frame = 0; frame < 60; frame++)
+					//for (int frame = 0; frame < 60; frame++)
 					{
 						const int numSteps = 2284;
 		                const int cycleStep = 123;
@@ -170,22 +208,22 @@ namespace pGBA
 		                {
 		                	if (vramCycles <= 0)
 		                    {
-			                	if (inHblank)
+                                if (myEngine.myGfx.inHblank == 1)
 			                    {
 			                    	vramCycles += 960;
 			                    	//LeaveHBlank here
 			                    	myEngine.myGfx.LeaveHBlank();
-			                        inHblank = false;
+                                    myEngine.myGfx.inHblank = 0;
 			                    }
 			                    else
 			                    {
 			                    	vramCycles += 272;
 			                    	//RenderLine here
-			                    	myEngine.myGfx.RenderLine();
+			                    	//myEngine.myGfx.RenderLine();
 			                    	//EnterHBlank here
 			                    	myEngine.myGfx.EnterHBlank();
-			                    	
-			                        inHblank = true;
+
+                                    myEngine.myGfx.inHblank = 1;
 			                    }
 		                	}
 		                	
@@ -193,10 +231,19 @@ namespace pGBA
 							
 							vramCycles -= cycleStep;
 		                }
+
+                        ushort vcount = myEngine.myMemory.ReadShort(0x04000006);
+                        if (vcount > 227) vcount = 0; else vcount++;
+                        myEngine.myMemory.WriteShort(0x04000006, vcount);
 					}
 				}
-				Monitor.Pulse(this);
+				//Monitor.Pulse(this);
 			}
 		}
+
+        private void scrnBox_Click(object sender, EventArgs e)
+        {
+
+        }
 	}
 }

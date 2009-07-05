@@ -32,10 +32,17 @@ namespace pGBA
 			Scrn = new Bitmap(240, 160, PixelFormat.Format16bppRgb555);
 			
 			myCPU = new Armcpu(this);
-			myMemory = new Memory();
+            myMemory = new Memory(this);
 			myLog = new Logging();
 			myGfx = new Gfx(this);
 			emulate=false;
 		}
+
+        public void Reset()
+        {
+            myGfx.Reset();
+            myMemory.Reset();
+            myCPU.Reset();
+        }
 	}
 }

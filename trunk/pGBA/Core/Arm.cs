@@ -79,7 +79,7 @@ namespace pGBA
 			rm = registers[opcode & 0x0F];
 			shift_type = (byte)((opcode >> 5) & 3);
 			
-			if((opcode & 0x08)!=0)
+			if((opcode & 16)!=0)
 			{
 				shift = (int)((opcode >> 8) & 0xF);
 				if (shift == 15)
@@ -266,10 +266,12 @@ namespace pGBA
         		registers[15] -= 1;
         		
         		//Set it to proper address
-        		registers[15] += 2;
+        		//registers[15] += 2;
         		
         		//Set cpu mode to thumb
         		registers[16] |= 1 << Armcpu.T_BIT;
+
+                myEngine.myCPU.myThumb.FlushQueue();
         	}
         	else
         	{
@@ -337,42 +339,42 @@ namespace pGBA
 				case 0x0: 
         			/*and*/
         			registers[rd] = rn & operand;
-        			set_dp_flags(registers[rd]);
+        			if(BIT_N(opcode,20)) set_dp_flags(registers[rd]);
         			break;
 				case 0x1: 
         			/*eor*/ 
         			registers[rd] = rn ^ operand;
-        			set_dp_flags(registers[rd]);
+                    if (BIT_N(opcode, 20)) set_dp_flags(registers[rd]);
         			break;
 				case 0x2: 
         			/*sub*/
         			registers[rd] = rn - operand;
-        			set_sub_flag(rn, operand, registers[rd]);
+                    if (BIT_N(opcode, 20)) set_sub_flag(rn, operand, registers[rd]);
         			break;
 				case 0x3: 
         			/*rsb*/ 
         			registers[rd] = operand - rn;
-        			set_sub_flag(rn, operand, registers[rd]);
+                    if (BIT_N(opcode, 20)) set_sub_flag(rn, operand, registers[rd]);
         			break;
 				case 0x4: 
         			/*add*/ 
         			registers[rd] = rn + operand;
-        			set_add_flag(rn, operand, registers[rd]);
+                    if (BIT_N(opcode, 20)) set_add_flag(rn, operand, registers[rd]);
         			break;
 				case 0x5: 
         			/*adc*/ 
         			registers[rd] = rn + operand + carry;
-        			set_add_flag(rn, operand, registers[rd]);
+                    if (BIT_N(opcode, 20)) set_add_flag(rn, operand, registers[rd]);
         			break;
 				case 0x6: 
         			/*sbc*/ 
         			registers[rd] = rn - operand + carry - 1;
-        			set_sub_flag(rn, operand, registers[rd]);
+                    if (BIT_N(opcode, 20)) set_sub_flag(rn, operand, registers[rd]);
         			break;
 				case 0x7: 
         			/*rsc*/ 
         			registers[rd] = operand - rn + carry - 1;
-        			set_sub_flag(rn, operand, registers[rd]);
+                    if (BIT_N(opcode, 20)) set_sub_flag(rn, operand, registers[rd]);
         			break;
 				case 0x8: 
         			/*tst*/ 
@@ -780,6 +782,249 @@ namespace pGBA
 		}
         #endregion
 
+        #region Section 10
+        void arm_ldrs()
+        {
+            uint rd = 0;
+            uint rn = 0;
+            uint rm = 0;
+            uint address = 0;
+            uint fimmed = 0;
+            uint fpreindex = 0;
+            uint faddbase = 0;
+            uint fbyte = 0;
+            uint fwriteback = 0;
+
+            rd = (opcode >> 12) & 0x0F;
+            rn = (opcode >> 16) & 0x0F;
+
+            fimmed = ((opcode >> 25) & 1);
+            fpreindex = ((opcode >> 24) & 1);
+            faddbase = ((opcode >> 23) & 1);
+            fbyte = ((opcode >> 22) & 1);
+            fwriteback = ((opcode >> 21) & 1);
+
+            address = registers[rn];
+
+            if (fimmed != 0)
+            {
+                rm = opcode & 0xFFF;
+            }
+            else
+            {
+                rm = imm_shift(opcode);
+            }
+
+            if (fpreindex != 0)
+            {
+                if (faddbase != 0)
+                {
+                    address += rm;
+                }
+                else
+                {
+                    address -= rm;
+                }
+            }
+
+            if (fbyte != 0)
+            {
+                registers[rd] = myEngine.myMemory.ReadByte(address);
+            }
+            else
+            {
+                registers[rd] = myEngine.myMemory.ReadWord(address);
+            }
+
+            if (rd == 15)
+            {
+                registers[15] &= ~3U;
+                FlushQueue();
+            }
+
+            if (fpreindex == 0)
+            {
+                if (faddbase != 0)
+                {
+                    address += rm;
+                }
+                else
+                {
+                    address -= rm;
+                }
+            }
+
+            if ((fwriteback == 1) || (fpreindex == 0))
+            {	/*Write-back: ‘‚«ž‚Ýæ‚ÌƒAƒhƒŒƒX‚ðŽc‚µ‚Ä‚¨‚­*/
+                registers[rn] = address;
+            }
+
+            cycles = 3;
+        }
+        void arm_ldrs_imm()
+        {
+            uint rd = 0;
+            uint rn = 0;
+            uint rm = 0;
+            uint address = 0;
+            uint fimmed = 0;
+            uint fpreindex = 0;
+            uint faddbase = 0;
+            uint ftype = 0;
+            uint fwriteback = 0;
+
+            rd = (opcode >> 12) & 0x0F;
+            rn = (opcode >> 16) & 0x0F;
+
+            fimmed = ((opcode >> 22) & 1);
+            fpreindex = ((opcode >> 24) & 1);
+            faddbase = ((opcode >> 23) & 1);
+            fwriteback = ((opcode >> 21) & 1);
+            ftype = ((opcode >> 5) & 3);
+
+            address = registers[rn];
+
+            if (fimmed != 0)
+            {
+                rm = (opcode & 0xF) | ((opcode >> 4) & 0xF0);
+            }
+            else
+            {
+                rm = imm_shift(opcode);
+            }
+
+            if (fpreindex != 0)
+            {
+                if (faddbase != 0)
+                {
+                    address += rm;
+                }
+                else
+                {
+                    address -= rm;
+                }
+            }
+
+            if (ftype == 1)
+            {
+                registers[rd] = myEngine.myMemory.ReadShort(address);
+            }
+            else
+            {
+                myEngine.myLog.WriteLog("Unhandled opcode 0x" + Convert.ToString(opcode));
+                //registers[rd] = myEngine.myMemory.ReadWord(address);
+            }
+
+            if (rd == 15)
+            {
+                registers[15] &= ~3U;
+                FlushQueue();
+            }
+
+            if (fpreindex == 0)
+            {
+                if (faddbase != 0)
+                {
+                    address += rm;
+                }
+                else
+                {
+                    address -= rm;
+                }
+            }
+
+            if ((fwriteback == 1) || (fpreindex == 0))
+            {	/*Write-back: ‘‚«ž‚Ýæ‚ÌƒAƒhƒŒƒX‚ðŽc‚µ‚Ä‚¨‚­*/
+                registers[rn] = address;
+            }
+
+            cycles = 3;
+        }
+        void arm_strs_imm()
+        {
+            uint rd = 0;
+            uint rn = 0;
+            uint rm = 0;
+            uint address = 0;
+            uint fimmed = 0;
+            uint fpreindex = 0;
+            uint faddbase = 0;
+            uint ftype = 0;
+            uint fwriteback = 0;
+
+            rd = (opcode >> 12) & 0x0F;
+            rn = (opcode >> 16) & 0x0F;
+
+            fimmed = ((opcode >> 22) & 1);
+            fpreindex = ((opcode >> 24) & 1);
+            faddbase = ((opcode >> 23) & 1);
+            fwriteback = ((opcode >> 21) & 1);
+            ftype = ((opcode >> 5) & 3);
+
+            address = registers[rn];
+
+            if (fimmed != 0)
+            {
+                rm = (opcode & 0xF) | ((opcode >> 4) & 0xF0);
+            }
+            else
+            {
+                rm = imm_shift(opcode);
+            }
+
+            if (fpreindex != 0)
+            {
+                if (faddbase != 0)
+                {
+                    address += rm;
+                }
+                else
+                {
+                    address -= rm;
+                }
+            }
+
+            if (ftype == 1)
+            {
+                myEngine.myMemory.WriteShort(address,(ushort)registers[rd]);
+            }
+            else if (ftype == 2)
+            {
+                registers[rd] = myEngine.myMemory.ReadWord(address);
+                registers[rd+1] = myEngine.myMemory.ReadWord(address+4);
+            }
+            else//if (ftype == 3)
+            {
+                myEngine.myMemory.WriteWord(address, registers[rd]);
+                myEngine.myMemory.WriteWord(address + 4, registers[rd + 1]);
+            }
+
+            if (rd == 15)
+            {
+                registers[15] &= ~3U;
+                FlushQueue();
+            }
+
+            if (fpreindex == 0)
+            {
+                if (faddbase != 0)
+                {
+                    address += rm;
+                }
+                else
+                {
+                    address -= rm;
+                }
+            }
+
+            if ((fwriteback == 1) || (fpreindex == 0))
+            {	/*Write-back: ‘‚«ž‚Ýæ‚ÌƒAƒhƒŒƒX‚ðŽc‚µ‚Ä‚¨‚­*/
+                registers[rn] = address;
+            }
+
+            cycles = 3;
+        }
+        #endregion
         #region Section 11
         void arm_ldm()
         {
@@ -981,14 +1226,20 @@ namespace pGBA
 			if(swi==0xFF) //Log
 			{
 				byte character = (byte)myEngine.myCPU.Registers[1];
+                byte printChar = (byte)myEngine.myCPU.Registers[3];
 				if(character == 0xFF) 
 				{
 					myEngine.myLog.WriteLog(Environment.NewLine);
 				}
-				else
-				{
-					myEngine.myLog.WriteLog(ASCIIEncoding.ASCII.GetString(new byte[] {character}));
-				}
+                else if (character == 0)
+                {
+                    myEngine.myLog.WriteLog(Environment.NewLine);
+                }
+                else
+                {
+                    //if(printChar == 3)
+                    myEngine.myLog.WriteLog(ASCIIEncoding.ASCII.GetString(new byte[] { character }));
+                }
 			}
 		 	
 		 	cycles = 3;
@@ -1016,13 +1267,7 @@ namespace pGBA
         }        
         
         private void set_sub_flag(uint a, uint b, uint c)
-		{	
-        	if(((opcode>>20)&1)==0)
-        	{
-        		//If S flag not set return and do nothing
-        		return;
-        	}
-        	
+		{	 	
         	/*sub,rsb,rsc,cmp*/
         	if(c==0)
         	{
@@ -1062,13 +1307,7 @@ namespace pGBA
 		}
 		
 		private void set_add_flag(uint a, uint b, uint c)
-		{	
-			if(((opcode>>20)&1)==0)
-        	{
-        		//If S flag not set return and do nothing
-        		return;
-        	}
-			
+		{		
 			/*add,adc,cmn*/
 			if(c==0)
         	{
@@ -1109,12 +1348,6 @@ namespace pGBA
 		
 		private void set_dp_flags(uint a)	
 		{	
-			if(((opcode>>20)&1)==0)
-        	{
-        		//If S flag not set return and do nothing
-        		return;
-        	}
-			
 			/*muls,mlas,and,eor,tst,teq,orr,mov,bic,mvn*/
 			negative = a >> 31;
             zero = a == 0 ? 1U : 0U;
@@ -1131,10 +1364,11 @@ namespace pGBA
         {
             byte opcode_24_4;
             uint cond = 0;
+            bool test = false;
 
             opcode = opcodeQueue;
             FlushQueue();
-            
+
             opcode_24_4	= (byte)((opcode >> 24) & 0x0F);	/*24-27 4bit*/
 
             UnpackFlags();
@@ -1225,24 +1459,70 @@ namespace pGBA
 								}
 							}
 						}
+                        /*Data Processing can be eitehr 0x1 or 0x3*/
+                        //arm_dataproc();
+                        goto jump1;
 	            		break;
+                    /*Data Processing*/
 					case 0x1:	/*0001*/
-						if(((opcode >> 4) & 0xFF) == 0x09)
-						{	
-							/*00001001*/
-							arm_swp();	/*Single Data Swap*/
-							break;
-						}
-						if((opcode & 0x0FFFFFF0) == 0x012FFF10)
-						{
-							arm_bx();	/*Branch and Exchange*/
-							break;
-						}
-						if((opcode & 0x0FFF0000) == 0x016F0000)
-						{
-			            //  arm_clz();	/*Count Leading Zeros*/
-							break;
-			            }
+jump1:
+                        if (((opcode >> 4) & 0xFF) == 0x09)
+                        {
+                            /*00001001*/
+                            arm_swp();	/*Single Data Swap*/
+                            break;
+                        }
+                        if ((opcode & 0x0FFFFFF0) == 0x012FFF10)
+                        {
+                            arm_bx();	/*Branch and Exchange*/
+                            break;
+                        }
+                        if ((opcode & 0x0FFF0000) == 0x016F0000)
+                        {
+                            //  arm_clz();	/*Count Leading Zeros*/
+                            break;
+                        }
+                        if (BIT_N(opcode, 4) && BIT_N(opcode, 7))
+                        {
+                            /*Halfword data Transfer:*/
+                            if (BIT_N(opcode, 20))
+                            {
+                                /*immdiate offset*/
+                                if (BIT_N(opcode, 22))
+                                {
+                                    /*Load from memory*/
+                                    arm_ldrs_imm();
+                                    break;
+                                }
+                                else
+                                {
+                                    /*Load from memory*/
+                                    arm_ldrs();
+                                    break;
+                                }
+                            }
+                            else
+                            {
+                                /*register offset*/
+                                if (BIT_N(opcode, 22))
+                                {
+                                    /*Store to memory*/
+                                    arm_strs_imm();
+                                    break;
+                                }
+                                else
+                                {
+                                    /*Store to memory*/
+                                    //arm_strs();
+                                    break;
+                                }
+                            }
+                        }
+                        goto jump2;
+                        break;
+                    case 0x2:	/*0010*/
+                    case 0x3:	/*0011*/
+jump2:
 						if((opcode&0xFFF00000)==0xE1000000){
 			            	arm_mrs();
 			            	break;
@@ -1252,49 +1532,7 @@ namespace pGBA
 			            	break;
 			            }
 						
-						if(BIT_N(opcode,4))
-						{	
-							/*Halfword data Transfer:*/
-							if(BIT_N(opcode,22))
-							{	
-								/*immdiate offset*/
-								if(BIT_N(opcode,20))
-								{
-			            			/*Load from memory*/
-									//arm_ldrs_imm();
-								}
-			            		else
-			            		{					
-			            			/*Store to memory*/
-									//arm_strs_imm();
-								}
-								break;
-							}
-							else
-							{					
-								/*register offset*/
-								if(BIT_N(opcode,20))
-								{	
-									/*Load from memory*/
-									//arm_ldrs();
-								}
-								else
-								{					
-									/*Store to memory*/
-									//arm_strs();
-								}
-								break;
-							}
-						}
-						
-						/*Data Processing can be eitehr 0x1 or 0x3*/
-						arm_dataproc();
-						break;
-	            	/*Data Processing*/
-	            	case 0x2:	/*0010*/
-					case 0x3:	/*0011*/	
-					
-						/*Data Processing can be eitehr 0x1 or 0x3*/
+						/*Data Processing can be eitehr 0x1, 0x2 or 0x3*/
 						arm_dataproc();
 						break;
 					
