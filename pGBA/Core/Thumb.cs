@@ -99,7 +99,8 @@ namespace pGBA
             if (immed == 0)
             {
                 carry = registers[rs] >> 31;
-                registers[rd] = 0;
+                if (carry == 1) registers[rd] = 0xFFFFFFFF;
+                else registers[rd] = 0;
             } else {
                 carry = (registers[rs] >> (immed - 1)) & 0x01;
                 registers[rd] = (uint)(((int)registers[rs]) >> immed);
@@ -281,11 +282,16 @@ namespace pGBA
 			//lsl rd,rs
 			int rd = (opcode & 0x07);
 			int rs = ((opcode>>3) & 0x07);
-			int shiftAmt = (int)(registers[rs] & 0x1F);
+			int shiftAmt = (int)(registers[rs] & 0xFF);
 			
 			if (shiftAmt == 0)
             {
-            	// Don't need to do anything
+                // Don't need to do anything
+                negative = registers[rd] >> 31;
+                zero = registers[rd] == 0 ? 1U : 0U;
+                //Is it 1 or 2 here??
+                cycles = 2;
+                return;
             }
             else if (shiftAmt < 32)
             {
@@ -315,11 +321,16 @@ namespace pGBA
 			//lsr rd,rs
 			int rd = (opcode & 0x07);
 			int rs = ((opcode>>3) & 0x07);
-			int shiftAmt = (int)(registers[rs] & 0x1F);
+			int shiftAmt = (int)(registers[rs] & 0xFF);
 			
 			if (shiftAmt == 0)
             {
             	// Don't need to do anything
+                negative = registers[rd] >> 31;
+                zero = registers[rd] == 0 ? 1U : 0U;
+                //Is it 1 or 2 here??
+                cycles = 2;
+                return;
             }
             else if (shiftAmt < 32)
             {
@@ -353,23 +364,24 @@ namespace pGBA
 			
 			if (shiftAmt == 0)
             {
-            	// Don't need to do anything
+                // Don't need to do anything
+                negative = registers[rd] >> 31;
+                zero = registers[rd] == 0 ? 1U : 0U;
+                //Is it 1 or 2 here??
+                cycles = 2;
+                return;
             }
             else if (shiftAmt < 32)
             {
             	carry = (registers[rd] >> (shiftAmt - 1)) & 0x1;
                 registers[rd] = (uint)(((int)registers[rd]) >> shiftAmt);
             }
-            else if (shiftAmt == 32)
+            else
             {
             	carry = (registers[rd] >> 31) & 0x1;
             	//May need some checks here unsure
-            	registers[rd] = 0;
-            }
-            else
-            {
-            	carry = 0;
-                registers[rd] = 0;
+                if (carry == 1) registers[rd] = 0xFFFFFFFF;
+                else registers[rd] = 0;
             }
 			
 			negative = registers[rd] >> 31;

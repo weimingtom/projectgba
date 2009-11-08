@@ -151,29 +151,29 @@ namespace pGBA
 					switch(((opcode >> 8)&3))
 					{
 						case 0:
-							str += String.Format("addhi r{0:d}, r{1:d}", (opcode & 0x7), ((opcode >> 3) & 0x7));
+							str += String.Format("addhi r{0:d}, r{1:d}", (opcode & 0xF), ((opcode >> 3) & 0xF));
 							break;
 						case 1:
-							str += String.Format("cmphi r{0:d}, r{1:d}", (opcode & 0x7), ((opcode >> 3) & 0x7));
+							str += String.Format("cmphi r{0:d}, r{1:d}", (opcode & 0xF), ((opcode >> 3) & 0xF));
 							break;
 						case 2:
-							if(((opcode & 0x7)==0x08) && (((opcode >> 3) & 0x7)==0x08))
+							if(((opcode & 0xF)==0x08) && (((opcode >> 3) & 0xF)==0x08))
 							{
 								str += "nop";
 							}
 							else
 							{
-								str += String.Format("movhi r{0:d}, r{1:d}", (opcode & 0x7), ((opcode >> 3) & 0x7));
+								str += String.Format("movhi r{0:d}, r{1:d}", (opcode & 0xF), ((opcode >> 3) & 0xF));
 							}
 							break;
 						case 3:
-							str += String.Format("bx r{0:d}", ((opcode >> 3) & 0x7));
+							str += String.Format("bx r{0:d}", ((opcode >> 3) & 0xF));
 							break;
 					}
 				}
 				break;
 			case 0x09:	/*01001*/
-			str += String.Format("ldr r{0:d},[pc,#0x{1:X2}]", ((opcode>>8) & 0x7), ((opcode & 0xFF)*4));
+			    str += String.Format("ldr r{0:d},[pc,#0x{1:X2}]", ((opcode>>8) & 0x7), ((opcode & 0xFF)*4));
 				break;
 			case 0x0A:	/*01010*/
 			case 0x0B:	/*01011*/
@@ -451,7 +451,6 @@ namespace pGBA
         	uint faddbase = 0;
         	uint fbyte = 0;
         	uint fwriteback = 0;
-        	uint amount = 0;
         	
         	rd = (opcode >> 12) & 0x0F;
         	rn = (opcode >> 16) & 0x0F;

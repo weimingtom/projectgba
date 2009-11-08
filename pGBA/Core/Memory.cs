@@ -18,15 +18,15 @@ namespace pGBA
 	public class Memory
 	{
 		//Memory
-		public byte[] bios;
-		public byte[] wram;
-		public byte[] iwram;
-		public byte[] io;
-		public byte[] pal;
-		public byte[] vram;
-		public byte[] oam;
-		public byte[] rom;
-		public byte[] sram;
+		public byte[] bios = new byte[0x3FFF + 1];
+		public byte[] wram = new byte[0x3FFFF + 1];
+		public byte[] iwram = new byte[0x7FFF + 1];
+		public byte[] io = new byte[0x3FF + 1];
+		public byte[] pal = new byte[0x3FF + 1];
+		public byte[] vram = new byte[0x17FFF + 1];
+		public byte[] oam = new byte[0x3FF + 1];
+		public byte[] sram = new byte[0xFFFF + 1];
+        public byte[] rom;
 		
 		//Defines
 		public bool romLoaded=false;
@@ -42,14 +42,21 @@ namespace pGBA
 
         public void Reset()
         {
-            bios = new byte[0x3FFF + 1];
-            wram = new byte[0x3FFFF + 1];
-            iwram = new byte[0x7FFF + 1];
-            io = new byte[0x3FF + 1];
-            pal = new byte[0x3FF + 1];
-            vram = new byte[0x17FFF + 1];
-            oam = new byte[0x3FF + 1];
-            sram = new byte[0xFFFF + 1];
+            Array.Clear(bios, 0, bios.Length);
+            Array.Clear(wram, 0, wram.Length);
+            Array.Clear(iwram, 0, iwram.Length);
+            Array.Clear(io, 0, io.Length);
+            Array.Clear(pal, 0, pal.Length);
+            Array.Clear(vram, 0, vram.Length);
+            Array.Clear(oam, 0, oam.Length);
+            Array.Clear(sram, 0, sram.Length);
+
+            WriteShort(0x04000020, 0x0100);
+            WriteShort(0x04000026, 0x0100);
+            WriteShort(0x04000030, 0x0100);
+            WriteShort(0x04000036, 0x0100);
+
+            WriteShort(0x04000130, 0x03FF);
         }
 		
 		public byte ReadByte(uint adr)
@@ -75,6 +82,21 @@ namespace pGBA
 				adr -= 0x04000000;
 				return (byte)(io[adr]);
 			}
+
+            //Palette (0x3FF)
+            if ((adr >= 0x05000000) && (adr <= 0x050003FF))
+            {
+                adr -= 0x05000000;
+                return (byte)(pal[adr]);
+            }
+
+            //VRAM
+            if ((adr >= 0x06000000) && (adr <= 0x06017FFF))
+            {
+                adr -= 0x06000000;
+                return (byte)(vram[adr]);
+            }
+			
 			
 			//Cartridge Rom
 			if((adr >= 0x08000000) && (adr <(0x08000000+romSize)))
@@ -110,13 +132,20 @@ namespace pGBA
                 switch(adr)
                 {
                     case 0x04:
-                        return (ushort)((io[adr] | io[adr + 1] << 8) | (myEngine.myGfx.inHblank << 1) | myEngine.myGfx.inVblank);
+                        return (ushort)((io[adr] | io[adr + 1] << 8) | (myEngine.myGfx.inVCount << 2) | (myEngine.myGfx.inHblank << 1) | myEngine.myGfx.inVblank);
                     default:
 				        return (ushort)(io[adr]|io[adr+1]<<8);
                 }
 			}
+
+            //Palette (0x3FF)
+            if ((adr >= 0x05000000) && ((adr + 1) <= 0x050003FF))
+            {
+                adr -= 0x05000000;
+                return (ushort)(pal[adr]|pal[adr+1]<<8);
+            }
 			
-			//VWRAM
+			//VRAM
 			if((adr >= 0x06000000) && ((adr+1) <= 0x06017FFF))
 			{
 				adr -= 0x06000000;
@@ -135,6 +164,11 @@ namespace pGBA
 		
 		public uint ReadWord(uint adr)
 		{
+            if ((adr & 0x02)!=0)
+            {
+                //Half word aligned
+                return (uint)(ReadShort(adr) | (ReadShort(adr-2) << 16));
+            }
 			//Work RAM (256kb)
 			if((adr >= 0x02000000) && ((adr+3) <= 0x0203FFFF))
 			{
@@ -155,8 +189,15 @@ namespace pGBA
 				adr -= 0x04000000;
 				return (uint)(io[adr]|io[adr+1]<<8|io[adr+2]<<16|io[adr+3]<<24);
 			}
+
+            //Palette (0x3FF)
+            if ((adr >= 0x05000000) && ((adr+3) <= 0x050003FF))
+            {
+                adr -= 0x05000000;
+                return (uint)(pal[adr]|pal[adr+1]<<8|pal[adr+2]<<16|pal[adr+3]<<24);
+            }
 			
-			//VWRAM
+			//VRAM
 			if((adr >= 0x06000000) && ((adr+3) <= 0x06017FFF))
 			{
 				adr -= 0x06000000;
@@ -190,6 +231,20 @@ namespace pGBA
 				adr -= 0x03000000;
 				iwram[adr] = value;
 			}
+
+            //I/O Registers (0x3FF)
+            if ((adr >= 0x04000000) && (adr <= 0x040003FF))
+            {
+                adr -= 0x04000000;
+                io[adr] = value;
+            }
+
+            //Palette (0x3FF)
+            if ((adr >= 0x05000000) && (adr <= 0x050003FF))
+            {
+                adr -= 0x05000000;
+                pal[adr] = value;
+            }
 		}
 		
 		public void WriteShort(uint adr, ushort value)
@@ -201,14 +256,30 @@ namespace pGBA
 				wram[adr] = (byte)(value & 0xFF);
 				wram[adr+1] = (byte)((value >> 8) & 0xFF);
 			}
-			
-			//IWRAM (32kb)
-			if((adr >= 0x03000000) && ((adr+1) <= 0x03007FFF))
-			{
-				adr -= 0x03000000;
-				iwram[adr] = (byte)(value & 0xFF);
-				iwram[adr+1] = (byte)((value >> 8) & 0xFF);
-			}
+
+            //IWRAM (32kb)
+            if ((adr >= 0x03000000) && ((adr + 1) <= 0x03007FFF))
+            {
+                adr -= 0x03000000;
+                iwram[adr] = (byte)(value & 0xFF);
+                iwram[adr+1] = (byte)((value >> 8) & 0xFF);
+            }
+
+            //I/O Registers (0x3FF)
+            if ((adr >= 0x04000000) && ((adr + 1) <= 0x040003FF))
+            {
+                adr -= 0x04000000;
+                io[adr] = (byte)(value & 0xFF);
+                io[adr+1] = (byte)((value >> 8) & 0xFF);
+            }
+
+            //Palette (0x3FF)
+            if ((adr >= 0x05000000) && ((adr + 1) <= 0x050003FF))
+            {
+                adr -= 0x05000000;
+                pal[adr] = (byte)(value & 0xFF);
+                pal[adr+1] = (byte)((value >> 8) & 0xFF);
+            }
 			
 			//VRAM
 			if((adr >= 0x06000000) && ((adr+1) <= 0x06017FFF))
@@ -240,6 +311,26 @@ namespace pGBA
 				iwram[adr+2] = (byte)((value >> 16) & 0xFF);
 				iwram[adr+3] = (byte)((value >> 24) & 0xFF);
 			}
+
+            //I/O Registers (0x3FF)
+            if ((adr >= 0x04000000) && ((adr+3) <= 0x040003FF))
+            {
+                adr -= 0x04000000;
+                io[adr] = (byte)(value & 0xFF);
+                io[adr+1] = (byte)((value >> 8) & 0xFF);
+                io[adr+2] = (byte)((value >> 16) & 0xFF);
+                io[adr+3] = (byte)((value >> 24) & 0xFF);
+            }
+
+            //Palette (0x3FF)
+            if ((adr >= 0x05000000) && ((adr + 1) <= 0x050003FF))
+            {
+                adr -= 0x05000000;
+                pal[adr] = (byte)(value & 0xFF);
+                pal[adr+1] = (byte)((value >> 8) & 0xFF);
+                pal[adr+2] = (byte)((value >> 16) & 0xFF);
+                pal[adr+3] = (byte)((value >> 24) & 0xFF);
+            }
 			
 			//VRAM
 			if((adr >= 0x06000000) && ((adr+3) <= 0x06017FFF))
