@@ -24,7 +24,6 @@ namespace pGBA
         private int cycles;
         public uint zero, carry, negative, overflow;
         private uint[] registers;
-        private uint shifterCarry;
 
         public Arm(Engine engine)
         {
@@ -49,18 +48,7 @@ namespace pGBA
 			shift	= (int)(((opcode >> 8) & 0xF)*2);
 			imm_val	= opcode & 0xFF;
 
-            imm_val = (imm_val >> shift) | (imm_val << (32 - shift));
-
-            if (shift == 0)
-            {
-                shifterCarry = carry;
-            }
-            else
-            {
-                shifterCarry = (imm_val >> 31) & 1;
-            }
-            
-            return imm_val;
+            return (imm_val >> shift) | (imm_val << (32 - shift));
 		}
         
         //Barrel Shifter
@@ -77,172 +65,168 @@ namespace pGBA
 			int 	valueSigned;
 				
 			rm = registers[opcode & 0x0F];
-			shift_type = (byte)((opcode >> 5) & 3);
-			
-			if((opcode & 16)!=0)
-			{
-				shift = (int)((opcode >> 8) & 0xF);
-				if (shift == 15)
-                {
-                    shift = (int)((registers[shift] + 0x4) & 0xFF);
-                }
-                else
-                {
-                    shift = (int)(registers[shift] & 0xFF);
-                }
-
-                if ((opcode & 0xF) == 15)
-                {
-                    rm += 4;
-                }
-			}
-			else
-			{
-				shift = (int)((opcode >> 7) & 0x1F);
-			}
+			shift_type = (byte)((opcode >> 5) & 3);		
+			shift = (int)((opcode >> 7) & 0x1F);
             
 			switch(shift_type)
 			{
 				case SHIFT_LSL:
-					if(((opcode>>25)&1)==1)
-					{
-						if((((rm << (shift - 1)) & 0x80000000) >> 31)!=0)
-						{
-							carry = 1; 
-						}
-						else
-						{
-							carry = 0;
-						}
-					}
-					rm = (rm << shift);
-					break;
+                    if (shift == 0)
+                    {
+                        return rm;
+                    }
+                    else
+                    {
+                        carry = (rm >> (32 - shift)) & 1;
+                        return rm << shift;
+                    }
 				case SHIFT_LSR:
-					if (shift!=0) 
-					{
-						if(((opcode>>25)&1)==1)
-						{
-							if(((rm >> (shift -1)) & 0x00000001)!=0)
-							{
-								carry = 1;
-							}
-							else
-							{
-								carry = 0;
-							}
-						}
-						rm = (rm >> shift);
-					} 
-					else
-					{
-						if(((opcode>>25)&1)==1)
-						{
-							if(((rm>>31)&1)==1)
-							{
-								carry = 1;  
-							}
-							else
-							{
-								carry = 0; 
-							}
-						}
-						rm = 0;
-					}
-					break;
+                    if (shift == 0)
+                    {
+                        carry = (rm >> 31) & 1;
+                        return 0;
+                    }
+                    else
+                    {
+                        carry = (rm >> (shift - 1)) & 1;
+                        return rm >> shift;
+                    }
 				case SHIFT_ASR:
-					if (shift!=0) {
-					//ASR #32 for c  = 0					//Get last bit shifted
-						if(((opcode>>25)&1)==1)
-						{
-							if(((rm >> (shift -1)) & 0x00000001)!=0)
-							{
-								carry = 1;
-							}
-							else
-							{
-								carry = 0;
-							}
-						}
-						valueSigned = (int)rm;			//Convert value to signed
-						rm = (uint)(valueSigned >> shift);
-					} else {
-						if(((opcode>>25)&1)==1)
-						{
-							if(((rm>>31)&1)==1)
-							{
-								carry = 1; 
-							}
-							else
-							{
-								carry = 0;
-							}
-						}
-						
-						if (carry!=0)
-						{
-							rm = 0xFFFFFFFF; 
-						}
-						else
-						{ 
-							rm = 0;
-						}
-					}
-					break;
+                    if (shift == 0)
+                    {
+                        if ((rm & (1 << 31)) == 0)
+                        {
+                            carry = 0;
+                            return 0;
+                        }
+                        else
+                        {
+                            carry = 1;
+                            return 0xFFFFFFFF;
+                        }
+                    }
+                    else
+                    {
+                        carry = (rm >> (shift - 1)) & 1;
+                        return (uint)(((int)rm) >> shift);
+                    }
 				case SHIFT_ROR:
-					if (shift!=0) 
-					{
-						//ROR
-						if(((opcode>>25)&1)==1)
-						{
-							if(((rm >> (shift -1)) & 0x00000001)!=0)
-							{
-								carry = 1;
-							}
-							else
-							{
-								carry = 0;
-							}
-						}
-						//value = _rotr (value, shiftAmt);
-						rm = (rm << (32 - shift)) | (rm >> shift);						
-					} 
-					else 
-					{		
-						//RRX		
-						if (carry!=0) 
-						{
-							if(((opcode>>25)&1)==1)
-							{
-								if((rm & 0x00000001)!=0)
-								{
-									carry = 1;
-								}
-								else
-								{
-									carry = 0;
-								}
-							}
-							rm = ((rm>>1)|0x80000000);
-						} else {
-							if(((opcode>>25)&1)==1)
-							{
-								if((rm & 0x00000001)!=0)
-								{
-									carry = 1;
-								}
-								else
-								{
-									carry = 0;
-								}
-							}
-							rm = rm >> 1;
-						}
-					}
+                    if (shift == 0)
+                    {
+                        // Actually an RRX
+                        valueSigned = (int)(rm & 1); //Temp
+                        rm = (carry << 31) | (rm >> 1);
+                        carry = (uint)valueSigned;
+                    }
+                    else
+                    {
+                        carry = (rm >> (shift - 1)) & 1;
+                        return (rm >> shift) | (rm << (32 - shift));
+                    }
 					break;
 			}
 			
             return rm;
 		}
+
+        public uint reg_shift(uint opcode)
+        {
+            byte shift_type;
+            int shift;
+            uint rm;
+
+            rm = registers[opcode & 0x0F];
+            shift_type = (byte)((opcode >> 5) & 3);
+
+            shift = (int)((opcode >> 8) & 0xF);
+            if (shift == 15)
+            {
+                shift = (int)((registers[shift] + 0x4) & 0xFF);
+            }
+            else
+            {
+                shift = (int)(registers[shift] & 0xFF);
+            }
+
+            if ((opcode & 0xF) == 15)
+            {
+                rm += 4;
+            }
+
+            if (shift == 0)
+            {
+                return rm;
+            }
+
+            switch (shift_type)
+            {
+                case SHIFT_LSL:
+                    if (shift < 32)
+                    {
+                        carry = (rm >> (32 - shift)) & 1;
+                        return rm << shift;
+                    }
+                    else if (shift == 32)
+                    {
+                        carry = rm & 1;
+                        return 0;
+                    }
+                    else
+                    {
+                        carry = 0;
+                        return 0;
+                    }
+                case SHIFT_LSR:
+                    if (shift < 32)
+                    {
+                        carry = (rm >> (shift - 1)) & 1;
+                        return rm >> shift;
+                    }
+                    else if (shift == 32)
+                    {
+                        carry = (rm >> 31) & 1;
+                        return 0;
+                    }
+                    else
+                    {
+                        carry = 0;
+                        return 0;
+                    }
+                case SHIFT_ASR:
+                    if (shift >= 32)
+                    {
+                        if ((rm & (1 << 31)) == 0)
+                        {
+                            carry = 0;
+                            return 0;
+                        }
+                        else
+                        {
+                            carry = 1;
+                            return 0xFFFFFFFF;
+                        }
+                    }
+                    else
+                    {
+                        carry = (rm >> (shift - 1)) & 1;
+                        return (uint)(((int)rm) >> shift);
+                    }
+                case SHIFT_ROR:
+                    if ((shift & 0x1F) == 0)
+                    {
+                        carry = (rm >> 31) & 1;
+                        return rm;
+                    }
+                    else
+                    {
+                        shift &= 0x1F;
+                        carry = (rm >> shift) & 1;
+                        return (rm >> shift) | (rm << (32 - shift));
+                    }
+            }
+
+            return rm;
+        }
         #endregion
         
         #region Opcodes
@@ -322,11 +306,18 @@ namespace pGBA
         	if(BIT_N(opcode,25)){	/*Immediate Operand*/
 				operand = imm_rotate(opcode);
 			}else{
-				operand = imm_shift(opcode);
+                if(BIT_N(opcode,4))
+                {
+				    operand = reg_shift(opcode);
+                }
+                else
+                {
+                    operand = imm_shift(opcode);
+                }
 			}
         	
         	bool registerShift = (opcode & (1 << 4)) == (1 << 4);
-            if (rn == 15 && ((opcode >> 25) & 0x7) == 0 && registerShift)
+            if (rn == 15 && !BIT_N(opcode, 25) && registerShift)
             {
                 rn = registers[rn] + 4;
             }
@@ -390,28 +381,28 @@ namespace pGBA
         			set_sub_flag(rn, operand, rn - operand);
         			break;
 				case 0xB: 
-        			/*cmn*/ 
-        			set_dp_flags(rn + operand);
+        			/*cmn*/
+                    set_add_flag(rn, operand, rn + operand);
         			break;
 				case 0xC: 
         			/*orr*/
         			registers[rd] = rn | operand;
-        			set_dp_flags(registers[rd]);
+                    if (BIT_N(opcode, 20)) set_dp_flags(registers[rd]);
         			break;
 				case 0xD: 
         			/*mov*/
         			registers[rd] = operand;
-        			set_dp_flags(registers[rd]);
+                    if (BIT_N(opcode, 20)) set_dp_flags(registers[rd]);
         			break;
 				case 0xE: 
         			/*bic*/
         			registers[rd] = rn & ~operand;
-        			set_dp_flags(registers[rd]);
+                    if (BIT_N(opcode, 20)) set_dp_flags(registers[rd]);
         			break;
 				case 0xF: 
         			/*mvn*/ 
         			registers[rd] = 0xFFFFFFFF ^ operand;
-        			set_dp_flags(registers[rd]);
+                    if (BIT_N(opcode, 20)) set_dp_flags(registers[rd]);
         			break;
 			}
             
@@ -538,14 +529,14 @@ namespace pGBA
         #region Section 7
         void arm_mla()
         {
-        	uint rm = (opcode >> 0) & 0x0E;
-        	uint rs = (opcode >> 8) & 0x0E;
-        	uint rn = (opcode >> 12) & 0x0E;
-        	uint rd = (opcode >> 16) & 0x0E;
+            uint rm = opcode & 0x0F;
+            uint rs = (opcode >> 8) & 0x0F;
+            uint rn = (opcode >> 12) & 0x0F;
+            uint rd = (opcode >> 16) & 0x0F;
         	
-        	registers[rd] = (registers[rm] * registers[rs]) + registers[rn];
+        	registers[rd] = registers[rm] * registers[rs] + registers[rn];
 
-        	set_dp_flags(registers[rd]);
+        	if(BIT_N(opcode,20)) set_dp_flags(registers[rd]);
         	
         	//Need to fix cycles
         	cycles = 3;
@@ -553,14 +544,14 @@ namespace pGBA
         
         void arm_mul()
         {
-        	uint rm = (opcode >> 0) & 0x0E;
-        	uint rs = (opcode >> 8) & 0x0E;
-        	uint rn = (opcode >> 12) & 0x0E;
-        	uint rd = (opcode >> 16) & 0x0E;
+            uint rm = opcode & 0x0F;
+            uint rs = (opcode >> 8) & 0x0F;
+            uint rn = (opcode >> 12) & 0x0F;
+            uint rd = (opcode >> 16) & 0x0F;
         	
         	registers[rd] = registers[rm] * registers[rs];
 
-        	set_dp_flags(registers[rd]);
+            if (BIT_N(opcode, 20)) set_dp_flags(registers[rd]);
         	
         	//Need to fix cycles
         	cycles = 3;
@@ -569,10 +560,10 @@ namespace pGBA
         //Long Variants
         void arm_mlal()
         {
-        	uint rm = (opcode >> 0) & 0x0E;
-        	uint rs = (opcode >> 8) & 0x0E;
-        	uint rdlo = (opcode >> 12) & 0x0E;
-        	uint rdhi = (opcode >> 16) & 0x0E;
+            uint rm = opcode & 0x0F;
+            uint rs = (opcode >> 8) & 0x0F;
+            uint rdlo = (opcode >> 12) & 0x0F;
+            uint rdhi = (opcode >> 16) & 0x0F;
         	
         	if (BIT_N(opcode,22)) {	//If it's signed...
 				// SMLAL
@@ -600,10 +591,10 @@ namespace pGBA
         
         void arm_mull()
         {
-        	uint rm = (opcode >> 0) & 0x0E;
-        	uint rs = (opcode >> 8) & 0x0E;
-        	uint rdlo = (opcode >> 12) & 0x0E;
-        	uint rdhi = (opcode >> 16) & 0x0E;
+            uint rm = opcode & 0x0F;
+            uint rs = (opcode >> 8) & 0x0F;
+            uint rdlo = (opcode >> 12) & 0x0F;
+            uint rdhi = (opcode >> 16) & 0x0F;
         	
         	if (BIT_N(opcode,22)) {	//If it's signed...
 				// SMULL
@@ -886,7 +877,7 @@ namespace pGBA
 
             if (fimmed != 0)
             {
-                rm = (opcode & 0xF) | ((opcode >> 4) & 0xF0);
+                rm = (opcode & 0xF) | (((opcode >> 8) & 0xF) << 4);
             }
             else
             {
@@ -909,9 +900,22 @@ namespace pGBA
             {
                 registers[rd] = myEngine.myMemory.ReadShort(address);
             }
+            else if (ftype == 2)
+            {
+                registers[rd] = myEngine.myMemory.ReadByte(address);
+                if ((registers[rd] & 0x80) != 0)
+                {
+                    registers[rd] |= 0xFFFFFF00;
+                }
+            }
             else
             {
-                myEngine.myLog.WriteLog("Unhandled opcode 0x" + Convert.ToString(opcode));
+                registers[rd] = myEngine.myMemory.ReadShort(address);
+                if ((registers[rd] & 0x8000) != 0)
+                {
+                    registers[rd] |= 0xFFFF0000;
+                }
+                //myEngine.myLog.WriteLog("Unhandled opcode 0x" + Convert.ToString(opcode));
                 //registers[rd] = myEngine.myMemory.ReadWord(address);
             }
 
@@ -965,7 +969,7 @@ namespace pGBA
 
             if (fimmed != 0)
             {
-                rm = (opcode & 0xF) | ((opcode >> 4) & 0xF0);
+                rm = (opcode & 0xF) | (((opcode >> 8) & 0xF) << 4);
             }
             else
             {
@@ -1025,6 +1029,7 @@ namespace pGBA
             cycles = 3;
         }
         #endregion
+
         #region Section 11
         void arm_ldm()
         {
@@ -1032,7 +1037,6 @@ namespace pGBA
             int lst = 0;
             uint done = 0;
             uint address = 0;
-            uint fimmed = 0;
             uint fpreindex = 0;
             uint faddbase = 0;
             uint fbyte = 0;
@@ -1114,7 +1118,6 @@ namespace pGBA
             int lst = 0;
             uint done = 0;
             uint address = 0;
-            uint fimmed = 0;
             uint fpreindex = 0;
             uint faddbase = 0;
             uint fbyte = 0;
@@ -1159,12 +1162,6 @@ namespace pGBA
                         myEngine.myMemory.WriteWord(address, registers[lst]);
                     }
 
-                    if (lst == 15)
-                    {
-                        registers[lst] &= ~3U;
-                        FlushQueue();
-                    }
-
                     if (fpreindex == 0)
                     {
                         if (faddbase != 0)
@@ -1197,6 +1194,7 @@ namespace pGBA
         	uint rd = 0;
         	uint rn = 0;
         	uint rm = 0;
+            uint temp = 0;
         	
         	rm = (opcode & 0x0F);
         	rd = (opcode >> 12) & 0x0F;
@@ -1204,13 +1202,15 @@ namespace pGBA
         	
         	if(BIT_N(opcode,22))
         	{
-        		myEngine.myMemory.WriteByte(registers[rm], (byte)registers[rm]);
-				registers[rd] = (uint)myEngine.myMemory.ReadByte(registers[rm]);
+                temp = (uint)myEngine.myMemory.ReadByte(registers[rn]);
+        		myEngine.myMemory.WriteByte(registers[rn], (byte)registers[rm]);
+                registers[rd] = temp;
         	}
         	else
         	{
-				myEngine.myMemory.WriteWord(registers[rm], registers[rm]);
-				registers[rd] = myEngine.myMemory.ReadWord(registers[rm]);
+                temp = myEngine.myMemory.ReadWord(registers[rn]);
+				myEngine.myMemory.WriteWord(registers[rn], registers[rm]);
+                registers[rd] = temp;
         	}
         	
         	cycles = 4;
@@ -1364,7 +1364,6 @@ namespace pGBA
         {
             byte opcode_24_4;
             uint cond = 0;
-            bool test = false;
 
             opcode = opcodeQueue;
             FlushQueue();
@@ -1462,7 +1461,6 @@ namespace pGBA
                         /*Data Processing can be eitehr 0x1 or 0x3*/
                         //arm_dataproc();
                         goto jump1;
-	            		break;
                     /*Data Processing*/
 					case 0x1:	/*0001*/
 jump1:
@@ -1519,7 +1517,6 @@ jump1:
                             }
                         }
                         goto jump2;
-                        break;
                     case 0x2:	/*0010*/
                     case 0x3:	/*0011*/
 jump2:
@@ -1589,7 +1586,7 @@ jump2:
             return cycles;
         }
 
-        private void FlushQueue()
+        public void FlushQueue()
         {
             opcodeQueue = myEngine.myMemory.ReadWord(registers[15]);
             registers[15] += 4;

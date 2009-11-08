@@ -98,19 +98,19 @@ namespace pGBA
             // openGBAToolStripMenuItem
             // 
             this.openGBAToolStripMenuItem.Name = "openGBAToolStripMenuItem";
-            this.openGBAToolStripMenuItem.Size = new System.Drawing.Size(129, 22);
+            this.openGBAToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.openGBAToolStripMenuItem.Text = "&Open GBA";
             this.openGBAToolStripMenuItem.Click += new System.EventHandler(this.OpenGBAToolStripMenuItemClick);
             // 
             // toolStripSeparator1
             // 
             this.toolStripSeparator1.Name = "toolStripSeparator1";
-            this.toolStripSeparator1.Size = new System.Drawing.Size(126, 6);
+            this.toolStripSeparator1.Size = new System.Drawing.Size(149, 6);
             // 
             // exitToolStripMenuItem
             // 
             this.exitToolStripMenuItem.Name = "exitToolStripMenuItem";
-            this.exitToolStripMenuItem.Size = new System.Drawing.Size(129, 22);
+            this.exitToolStripMenuItem.Size = new System.Drawing.Size(152, 22);
             this.exitToolStripMenuItem.Text = "&Exit";
             this.exitToolStripMenuItem.Click += new System.EventHandler(this.ExitToolStripMenuItemClick);
             // 
@@ -184,6 +184,7 @@ namespace pGBA
             this.statusStrip.Size = new System.Drawing.Size(240, 22);
             this.statusStrip.TabIndex = 2;
             this.statusStrip.Text = "statusStrip";
+            this.statusStrip.ItemClicked += new System.Windows.Forms.ToolStripItemClickedEventHandler(this.statusStrip_ItemClicked);
             // 
             // FPS_Indicator
             // 
@@ -197,7 +198,6 @@ namespace pGBA
             // 
             // timer
             // 
-            this.timer.Enabled = true;
             this.timer.Interval = 20;
             this.timer.Tick += new System.EventHandler(this.TimerTick);
             // 
@@ -215,6 +215,8 @@ namespace pGBA
             this.Name = "MainForm";
             this.Text = "pGBA";
             this.Load += new System.EventHandler(this.MainFormLoad);
+            this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.MainForm_KeyDown);
+            this.KeyUp += new System.Windows.Forms.KeyEventHandler(this.MainForm_KeyUp);
             ((System.ComponentModel.ISupportInitialize)(this.scrnBox)).EndInit();
             this.menuStrip.ResumeLayout(false);
             this.menuStrip.PerformLayout();

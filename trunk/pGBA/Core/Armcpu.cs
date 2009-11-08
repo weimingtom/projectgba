@@ -75,6 +75,21 @@ namespace pGBA
         public uint spsrSVC = 0;
         public uint spsrABT = 0;
         public uint spsrUND = 0;
+
+        public uint IRQ_VBLANK = 0x0001;
+        public uint IRQ_HBLANK = 0x0002;
+        public uint IRQ_VCOUNT = 0x0004;
+        public uint IRQ_TIMER0 = 0x0008;
+        public uint IRQ_TIMER1 = 0x0010;
+        public uint IRQ_TIMER2 = 0x0020;
+        public uint IRQ_TIMER3 = 0x0040;
+        public uint IRQ_SERIAL = 0x0080;
+        public uint IRQ_DMA0 = 0x0100;
+        public uint IRQ_DMA1 = 0x0200;
+        public uint IRQ_DMA2 = 0x0400;
+        public uint IRQ_DMA3 = 0x0800;
+        public uint IRQ_KEYPAD = 0x1000;
+        public uint IRQ_GAMEPAK = 0x2000;
         
 		private Engine myEngine;
 		public Thumb myThumb;
@@ -106,7 +121,7 @@ namespace pGBA
 			bankedSVC[0] = 0x03007FE0;
             bankedIRQ[0] = 0x03007FA0;
 			
-			Registers[16] = 0x0000001F;
+			Registers[16] = 0x0000005F; //VBA sets 0x5F should default to 0x1F
 			//Default to thumb mode (Cheating)
 			//Registers[16] = 0x00000003F;	
 			
@@ -144,7 +159,7 @@ namespace pGBA
 		public void StepScanline()
 		{
 			Emulate(960);
-			//myEngine.myGfx.RenderLine();
+			myEngine.myGfx.RenderLine();
 			myEngine.myGfx.EnterHBlank();
 			Emulate(272);
 			myEngine.myGfx.LeaveHBlank();
@@ -180,6 +195,17 @@ namespace pGBA
                     SwapRegsHelper(bankedUND);
                     break;
             }
+        }
+
+        public void Interrupt(uint irq)
+        {
+	        if((myEngine.myMemory.ReadWord(0x04000208) & 1) == 0)return;
+            if ((myEngine.myMemory.ReadShort(0x04000200) & irq) == 0) return;
+
+            myEngine.myMemory.WriteWord(myEngine.myCPU.Registers[13], myEngine.myCPU.Registers[15]);
+            myEngine.myCPU.Registers[13] += 4;
+            myEngine.myCPU.Registers[15] = myEngine.myMemory.ReadWord(0x03007F00);
+            myArm.FlushQueue();
         }
 	}
 }

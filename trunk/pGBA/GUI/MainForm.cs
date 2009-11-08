@@ -79,6 +79,7 @@ namespace pGBA
         {
             if (myEngine.myMemory.romLoaded == false || !Focused)
             {
+                UpdateScreen();
                 return;
             }
             PeekMsg msg;
@@ -116,7 +117,8 @@ namespace pGBA
                     
                     byte[] rom = new byte[romSize];
                     stream.Read(rom, 0, (int)stream.Length);
-                    
+                    stream.Close();
+
                     myEngine.myMemory.romSize=romSize;
 
                     myEngine.myMemory.LoadRom(rom);
@@ -184,7 +186,7 @@ namespace pGBA
 		
 		void TimerTick(object sender, EventArgs e)
 		{
-            RunEmulationLoop();
+            //RunEmulationLoop();
 
 			//if(myEngine.myGfx.curLine < 160)
 			//	UpdateScreen();
@@ -219,7 +221,7 @@ namespace pGBA
 			                    {
 			                    	vramCycles += 272;
 			                    	//RenderLine here
-			                    	//myEngine.myGfx.RenderLine();
+			                    	myEngine.myGfx.RenderLine();
 			                    	//EnterHBlank here
 			                    	myEngine.myGfx.EnterHBlank();
 
@@ -231,10 +233,6 @@ namespace pGBA
 							
 							vramCycles -= cycleStep;
 		                }
-
-                        ushort vcount = myEngine.myMemory.ReadShort(0x04000006);
-                        if (vcount > 227) vcount = 0; else vcount++;
-                        myEngine.myMemory.WriteShort(0x04000006, vcount);
 					}
 				}
 				//Monitor.Pulse(this);
@@ -244,6 +242,63 @@ namespace pGBA
         private void scrnBox_Click(object sender, EventArgs e)
         {
 
+        }
+
+        private void statusStrip_ItemClicked(object sender, ToolStripItemClickedEventArgs e)
+        {
+
+        }
+
+        private void MainForm_KeyDown(object sender, KeyEventArgs e)
+        {
+            //MessageBox.Show(e.KeyCode.ToString(), "Your input");
+            int current = (int)myEngine.myMemory.ReadShort(0x04000130);
+            if (e.KeyCode == Keys.V)
+            {
+                current = 0x3FF & (int)~(1 << 0);
+            }
+            else if (e.KeyCode == Keys.B)
+            {
+                current = 0x3FF & (int)~(1 << 1);
+            }
+            else if (e.KeyCode == Keys.Space)
+            {
+                current = 0x3FF & (int)~(1 << 2);
+            }
+            else if (e.KeyCode == Keys.Enter)
+            {
+                current = 0x3FF & (int)~(1 << 3);
+            }
+            else if (e.KeyCode == Keys.Right)
+            {
+                current = 0x3FF & (int)~(1 << 4);
+            }
+            else if (e.KeyCode == Keys.Left)
+            {
+                current = 0x3FF & (int)~(1 << 5);
+            }
+            else if (e.KeyCode == Keys.Up)
+            {
+                current = 0x3FF & (int)~(1 << 6);
+            }
+            else if (e.KeyCode == Keys.Down)
+            {
+                current = 0x3FF & (int)~(1 << 7);
+            }
+            else if (e.KeyCode == Keys.C)
+            {
+                current = 0x3FF & (int)~(1 << 8);
+            }
+            else if (e.KeyCode == Keys.N)
+            {
+                current = 0x3FF & (int)~(1 << 9);
+            }
+            myEngine.myMemory.WriteShort(0x04000130, (ushort)current);
+        }
+
+        private void MainForm_KeyUp(object sender, KeyEventArgs e)
+        {
+            myEngine.myMemory.WriteShort(0x04000130, 0x03FF);
         }
 	}
 }
